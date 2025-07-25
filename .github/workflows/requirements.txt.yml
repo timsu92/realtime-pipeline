@@ -58,7 +58,9 @@ jobs:
       - name: Check if requirements.txt has changes
         id: req_changed
         run: |
-          git diff --exit-code requirements.txt || echo "changed=1" >> $GITHUB_OUTPUT
+          if [ -n "$(git status --porcelain requirements.txt)" ]; then
+            echo "changed=1" >> $GITHUB_OUTPUT
+          fi
 
       - name: Commit and push changes
         if: steps.req_changed.outputs.changed == '1'

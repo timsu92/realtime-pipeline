@@ -1,0 +1,71 @@
+name: Update requirements.txt when uv.lock changes
+
+on:
+  push:
+    paths:
+      - "uv.lock"
+  pull_request:
+    paths:
+      - "uv.lock"
+
+permissions:
+  contents: write
+
+jobs:
+  update-requirements:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version-file: "pyproject.toml"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          # Install a specific version of uv.
+          version: "0.8.3"
+          enable-cache: true
+
+      - name: Change to corresponding branch if on a tag
+        if: github.ref_type == 'tag'
+        run: |
+          git fetch --all
+          # try to find the branch name. Error if on a detached HEAD.
+          BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+          if [ -z "$BRANCH" ]; then
+            # detached HEAD, find the branch name from the tag
+            BRANCH=$(git branch -r --contains HEAD | grep -v '\->' | grep -v '/HEAD' | head -n 1 | sed 's/^\s*origin\///' -)
+            if [ -z "$BRANCH" ]; then
+              echo "Failed to find branch name for detached HEAD"
+              exit 1
+            fi
+            echo "detached HEAD detected, switching to branch ${BRANCH}"
+            git switch ${ BRANCH }
+          else
+            echo "Already on branch ${BRANCH}"
+          fi
+
+      - name: Export requirements.txt
+        run: uv export --format requirements-txt > requirements.txt
+
+      - name: Check if requirements.txt has changes
+        id: req_changed
+        run: |
+          git diff --exit-code requirements.txt || echo "changed=1" >> $GITHUB_OUTPUT
+
+      - name: Commit and push changes
+        if: steps.req_changed.outputs.changed == '1'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git pull --ff-only
+          git add requirements.txt
+          git commit -m "build(pip): update requirements.txt based on changes in uv.lock"
+          git push

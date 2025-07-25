@@ -1,0 +1,9 @@
+default_stages:
+  - pre-commit
+  - post-merge
+repos:
+  - repo: https://github.com/netromdk/vermin
+    rev: v1.6.0
+    hooks:
+      - id: vermin
+        args: ["src"]  # other configs are in vermin.conf

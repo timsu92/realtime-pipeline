@@ -1,1 +1,1 @@
-from realtime_pipeline import Node
+from realtime_pipeline.realtime_pipeline import Node

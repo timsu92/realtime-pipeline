@@ -36,7 +36,7 @@ jobs:
         run: |
           git fetch --all
           # try to find the branch name. Error if on a detached HEAD.
-          BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+          BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || true)
           if [ -z "$BRANCH" ]; then
             # detached HEAD, find the branch name from the tag
             BRANCH=$(git branch -r --contains HEAD | grep -v '\->' | grep -v '/HEAD' | head -n 1 | sed 's/^\s*origin\///' -)

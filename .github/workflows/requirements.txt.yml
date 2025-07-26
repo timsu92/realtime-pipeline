@@ -17,21 +17,19 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version-file: "pyproject.toml"
-
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
         with:
           # Install a specific version of uv.
           version: "0.8.3"
           enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
 
       - name: Change to corresponding branch if on a tag
         if: github.ref_type == 'tag'

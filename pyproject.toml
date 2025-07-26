@@ -1,5 +1,5 @@
 [project]
-name = "realtime_pipeline"
+name = "realtime-pipeline"
 version = "0.1.0"
 description = "Build up pipelined programs to process the newest data"
 authors = [
@@ -7,11 +7,38 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.7"
+license = "Apache-2.0"
 license-files = ["LICENSE"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
 dependencies = [
     "readerwriterlock>=1.0.9",
     "sortedcontainers>=2.4.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/timsu92/realtime-pipeline"
+Documentation = "https://github.com/timsu92/realtime-pipeline"
+Repository = "https://github.com/timsu92/realtime-pipeline"
+Issues = "https://github.com/timsu92/realtime-pipeline/issues"
 
 
 [build-system]

@@ -7,3 +7,10 @@ repos:
     hooks:
       - id: vermin
         args: ["src"]  # other configs are in vermin.conf
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.5
+    hooks:
+      # linter
+      - id: ruff-check
+      # formatter
+      - id: ruff-format

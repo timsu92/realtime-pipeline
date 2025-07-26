@@ -32,6 +32,9 @@ jobs:
           # Install a specific version of uv.
           version: "0.8.3"
           enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
 
       - name: Change to corresponding branch if on a tag
         if: github.ref_type == 'tag'

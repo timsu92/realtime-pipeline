@@ -3,9 +3,11 @@ name: Run unittests on push
 on:
   push:
     paths:
+      - "uv.lock"
       - "**/*.py"
   pull_request:
     paths:
+      - "uv.lock"
       - "**/*.py"
 
 jobs:

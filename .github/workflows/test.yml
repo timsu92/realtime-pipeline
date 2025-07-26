@@ -2,7 +2,11 @@ name: Run unittests on push
 
 on:
   push:
+    paths:
+      - "**/*.py"
   pull_request:
+    paths:
+      - "**/*.py"
 
 jobs:
   test:

@@ -14,3 +14,10 @@ repos:
       - id: ruff-check
       # formatter
       - id: ruff-format
+  - hooks:
+      - id: commitizen
+      - id: commitizen-branch
+        stages:
+          - push
+    repo: https://github.com/commitizen-tools/commitizen
+    rev: v4.8.3

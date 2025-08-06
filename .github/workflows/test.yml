@@ -34,7 +34,7 @@ jobs:
             **/uv.lock
 
       - name: Install dependencies
-        run: uv sync --frozen
+        run: uv sync --locked
 
       - name: Run unittests
         run: uv run python3 -m unittest discover tests

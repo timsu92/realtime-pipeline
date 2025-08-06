@@ -1,9 +1,9 @@
-from bisect import bisect_left
 import threading
-from typing import Callable, Generic, Optional, Dict, List, Tuple, TypeVar
+from bisect import bisect_left
+from typing import Callable, Generic, Optional, TypeVar
 
-from sortedcontainers import SortedDict
 from readerwriterlock import rwlock
+from sortedcontainers import SortedDict
 
 Timestamp = float
 
@@ -11,7 +11,6 @@ Data = TypeVar("Data")
 
 
 class Node(Generic[Data], threading.Thread):
-
     def __init__(
         self,
         acceptable_time_bias=1.5,
@@ -25,9 +24,9 @@ class Node(Generic[Data], threading.Thread):
         """ Timestamp -> Data """
 
         self._data_lock = rwlock.RWLockFair()
-        self._last_downstream_gots: Dict[Node, Timestamp] = {}
+        self._last_downstream_gots: dict[Node, Timestamp] = {}
         self._subscribe_lock = threading.Lock()
-        self._upstreams: List[Node] = []
+        self._upstreams: list[Node] = []
         self._new_data_available = threading.Event()
 
     def subscribe(self, subscriber: "Node"):
@@ -46,7 +45,7 @@ class Node(Generic[Data], threading.Thread):
             self._last_downstream_gots.pop(subscriber)
             subscriber._upstreams.remove(self)
 
-    def _query_availables(self, downstream: "Node", block=True) -> List[Timestamp]:
+    def _query_availables(self, downstream: "Node", block=True) -> list[Timestamp]:
         """Tries to query available data timestamps for the downstream node.
         If `block` is True, it will return with currently available timestamps or block until one is available.
         If `block` is False, it will return immediately with available timestamps or an empty list.
@@ -59,7 +58,7 @@ class Node(Generic[Data], threading.Thread):
             read_lock.release()
             self._new_data_available.wait()
             return self._query_availables(downstream)
-        availables: List[Timestamp] = list(self._data.islice(start_index, None))
+        availables: list[Timestamp] = list(self._data.islice(start_index, None))
         read_lock.release()
         return availables
 
@@ -69,7 +68,7 @@ class Node(Generic[Data], threading.Thread):
         self._last_downstream_gots[subscriber] = timestamp
         return data
 
-    def _get_from_upstream(self) -> Tuple[List, Timestamp]:
+    def _get_from_upstream(self) -> tuple[list, Timestamp]:
         # The timestamps of processed data available from upstream nodes
         while True:
             availables = [up._query_availables(self) for up in self._upstreams]

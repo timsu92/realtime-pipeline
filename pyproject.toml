@@ -3,10 +3,10 @@ name = "realtime-pipeline"
 version = "0.1.2"
 description = "Build up pipelined programs to process the newest data"
 authors = [
-    {name = "timsu92",email = "33785401+timsu92@users.noreply.github.com"}
+    { name = "timsu92", email = "33785401+timsu92@users.noreply.github.com" },
 ]
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 classifiers = [
@@ -17,7 +17,6 @@ classifiers = [
     "License :: OSI Approved :: Apache Software License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3 :: Only",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -46,7 +45,16 @@ build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
+    "commitizen>=4.8.3",
     "pre-commit>=2.21.0",
     "ruff>=0.12.5",
     "vermin>=1.6.0",
 ]
+
+[tool.commitizen]
+name = "cz_conventional_commits"
+tag_format = "v$version"
+version_scheme = "pep440"
+version_provider = "uv"
+update_changelog_on_bump = true
+major_version_zero = true

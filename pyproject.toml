@@ -47,7 +47,7 @@ build-backend = "uv_build"
 [dependency-groups]
 dev = [
     "commitizen>=4.8.3",
-    "pre-commit>=2.21.0",
+    "pre-commit>=3.2.0",
     "ruff>=0.12.5",
     "vermin>=1.6.0",
 ]

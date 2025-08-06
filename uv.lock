@@ -416,7 +416,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "commitizen", specifier = ">=4.8.3" },
-    { name = "pre-commit", specifier = ">=2.21.0" },
+    { name = "pre-commit", specifier = ">=3.2.0" },
     { name = "ruff", specifier = ">=0.12.5" },
     { name = "vermin", specifier = ">=1.6.0" },
 ]

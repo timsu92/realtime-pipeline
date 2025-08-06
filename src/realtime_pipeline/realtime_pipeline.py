@@ -1,6 +1,6 @@
 import threading
 from bisect import bisect_left
-from typing import Callable, Generic, Optional, TypeVar
+from typing import Any, Callable, Generic, Iterable, Mapping, Optional, TypeVar
 
 from readerwriterlock import rwlock
 from sortedcontainers import SortedDict
@@ -15,8 +15,13 @@ class Node(Generic[Data], threading.Thread):
         self,
         acceptable_time_bias=1.5,
         target: Optional[Callable] = None,
+        args: Iterable[Any] = (),
+        kwargs: Optional[Mapping[str, Any]] = None,
+        *,
+        name: Optional[str] = None,
+        daemon: Optional[bool] = None,
     ) -> None:
-        super().__init__()
+        super().__init__(name=name, args=args, kwargs=kwargs, daemon=daemon)
         self.acceptable_time_bias = acceptable_time_bias
         self.target = target
 

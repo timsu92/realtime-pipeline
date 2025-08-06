@@ -1,9 +1,9 @@
-from bisect import bisect_left
 import threading
+from bisect import bisect_left
 from typing import Callable, Generic, Optional, TypeVar
 
-from sortedcontainers import SortedDict
 from readerwriterlock import rwlock
+from sortedcontainers import SortedDict
 
 Timestamp = float
 
@@ -11,7 +11,6 @@ Data = TypeVar("Data")
 
 
 class Node(Generic[Data], threading.Thread):
-
     def __init__(
         self,
         acceptable_time_bias=1.5,

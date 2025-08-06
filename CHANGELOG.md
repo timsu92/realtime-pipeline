@@ -1,3 +1,9 @@
+## v0.2.0 (2025-08-07)
+
+### Feat
+
+- **node**: bypass inherited __init__ params
+
 ## v0.1.3 (2025-08-06)
 
 ### Feat

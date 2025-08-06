@@ -37,6 +37,7 @@ Homepage = "https://github.com/timsu92/realtime-pipeline"
 Documentation = "https://github.com/timsu92/realtime-pipeline"
 Repository = "https://github.com/timsu92/realtime-pipeline"
 Issues = "https://github.com/timsu92/realtime-pipeline/issues"
+Changelog = "https://github.com/timsu92/realtime-pipeline/blob/main/CHANGELOG.md"
 
 
 [build-system]

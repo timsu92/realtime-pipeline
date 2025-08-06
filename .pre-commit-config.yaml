@@ -20,5 +20,5 @@ repos:
       - id: commitizen
       - id: commitizen-branch
         stages:
-          - push
+          - pre-push
 

@@ -34,7 +34,7 @@ jobs:
 
       - name: Build release distributions
         run: |
-          uv sync --frozen
+          uv sync --locked
           uv build
 
       - name: Upload distributions

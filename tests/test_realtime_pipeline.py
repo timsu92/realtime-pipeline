@@ -1,7 +1,10 @@
-from random import randint
-import unittest
 import threading
 import time
+import unittest
+from random import randint
+
+import deprecation
+
 from realtime_pipeline import Node
 
 
@@ -22,6 +25,7 @@ def sum_processor(data):
 class BasicNodeFunctions(unittest.TestCase):
     """Test basic functionalities of Node class"""
 
+    @deprecation.fail_if_not_removed
     def setUp(self):
         # Simple one-to-one relationship setup
         self.upstream = Node(target=lambda _: "dummy")
@@ -131,6 +135,7 @@ class BasicNodeFunctions(unittest.TestCase):
 class TestNodeOneToOne(unittest.TestCase):
     """Test one-to-one pub/sub relationship"""
 
+    @deprecation.fail_if_not_removed
     def setUp(self):
         # Create a simple one-to-one relationship
         self.upstream = Node(target=lambda _: "dummy")
@@ -190,6 +195,7 @@ class TestNodeOneToOne(unittest.TestCase):
 class TestNodeMultipleUpstreams(unittest.TestCase):
     """Test multiple upstreams to a single downstream node"""
 
+    @deprecation.fail_if_not_removed
     def setUp(self):
         self.up1 = Node(target=lambda _: "up1_data")
         self.up2 = Node(target=lambda _: "up2_data")
@@ -268,6 +274,7 @@ class TestNodeMultipleToMultiple(unittest.TestCase):
     def test_concurrent_subscribe_unsubscribe(self):
         """Test the thread safety of concurrent subscribe/unsubscribe"""
 
+        @deprecation.fail_if_not_removed
         def subscribe_and_unsubscribe(downstream: Node):
             # Create randomness on number of concurrent subscribers
             chunk = randint(0, len(self.upstreams) - 1)
@@ -307,6 +314,7 @@ class TestNodeEdgeCases(unittest.TestCase):
             # An error should be raised when there are no upstream nodes
             node._get_from_upstream()
 
+    @deprecation.fail_if_not_removed
     def test_empty_upstream_data(self):
         """Test behavior when upstream nodes have no data"""
         upstream = Node(target=lambda _: "data")
@@ -337,6 +345,7 @@ class TestNodeEdgeCases(unittest.TestCase):
         with self.assertRaises((KeyError, ValueError)):
             node1.unsubscribe(node2)
 
+    @deprecation.fail_if_not_removed
     def test_duplicate_subscription(self):
         """Test that duplicate subscriptions raise an error"""
         upstream = Node(target=lambda _: "data")

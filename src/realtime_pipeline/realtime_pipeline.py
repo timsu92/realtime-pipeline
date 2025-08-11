@@ -2,6 +2,7 @@ import threading
 from bisect import bisect_left
 from typing import Any, Callable, Generic, Iterable, Mapping, Optional, TypeVar
 
+from deprecation import deprecated
 from readerwriterlock import rwlock
 from sortedcontainers import SortedDict
 
@@ -34,6 +35,7 @@ class Node(Generic[Data], threading.Thread):
         self._upstreams: list[Node] = []
         self._new_data_available = threading.Event()
 
+    @deprecated(deprecated_in="0.3.0", details="Use `subscribe_to` instead.")
     def subscribe(self, subscriber: "Node"):
         """Downstream node subscribe to this node and receive data from this node."""
         with self._subscribe_lock, subscriber._subscribe_lock:
@@ -44,11 +46,28 @@ class Node(Generic[Data], threading.Thread):
             self._last_downstream_gots[subscriber] = -1
             subscriber._upstreams.append(self)
 
+    def subscribe_to(self, upstream_node: "Node"):
+        """Subscribes this node to a upstream_node"""
+        with self._subscribe_lock, upstream_node._subscribe_lock:
+            if upstream_node in self._upstreams:
+                raise ValueError(f"Node {self} already subscribed to {upstream_node}")
+            upstream_node._last_downstream_gots[self] = -1
+            self._upstreams.append(upstream_node)
+
+    @deprecated(deprecated_in="0.3.0", details="Use `unsubscribe_to` instead.")
     def unsubscribe(self, subscriber: "Node"):
         """Downstream node unsubscribe from this node."""
         with self._subscribe_lock, subscriber._subscribe_lock:
             self._last_downstream_gots.pop(subscriber)
             subscriber._upstreams.remove(self)
+
+    def unsubscribe_to(self, upstream_node: "Node"):
+        """Unsubscribes this node from a upstream_node"""
+        with self._subscribe_lock, upstream_node._subscribe_lock:
+            if upstream_node not in self._upstreams:
+                raise ValueError(f"Node {self} not subscribed to {upstream_node}")
+            upstream_node._last_downstream_gots.pop(self)
+            self._upstreams.remove(upstream_node)
 
     def _query_availables(self, downstream: "Node", block=True) -> list[Timestamp]:
         """Tries to query available data timestamps for the downstream node.

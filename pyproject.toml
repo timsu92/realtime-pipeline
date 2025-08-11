@@ -28,6 +28,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
+    "deprecation>=2.1.0",
     "readerwriterlock>=1.0.9",
     "sortedcontainers>=2.4.0",
 ]

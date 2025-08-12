@@ -411,6 +411,7 @@ dependencies = [
     { name = "deprecation" },
     { name = "readerwriterlock" },
     { name = "sortedcontainers" },
+    { name = "typing-extensions" },
 ]
 
 [package.dev-dependencies]
@@ -426,6 +427,7 @@ requires-dist = [
     { name = "deprecation", specifier = ">=2.1.0" },
     { name = "readerwriterlock", specifier = ">=1.0.9" },
     { name = "sortedcontainers", specifier = ">=2.4.0" },
+    { name = "typing-extensions", specifier = ">=4.14.1" },
 ]
 
 [package.metadata.requires-dev]

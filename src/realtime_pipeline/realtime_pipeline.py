@@ -13,9 +13,9 @@ from typing import (
 from deprecation import deprecated
 from readerwriterlock import rwlock
 from sortedcontainers import SortedDict
-from typing_extensions import TypeVarTuple, Unpack
+from typing_extensions import TypeAlias, TypeVarTuple, Unpack
 
-Timestamp = float
+Timestamp: TypeAlias = float
 
 UpstreamT = TypeVarTuple("UpstreamT")
 DownstreamT = TypeVar("DownstreamT")

@@ -74,7 +74,7 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
             self._last_downstream_gots.pop(subscriber)
             subscriber._upstreams.remove(self)
 
-    def unsubscribe_to(self, upstream_node: "Node"):
+    def unsubscribe_from(self, upstream_node: "Node"):
         """Unsubscribes this node from a upstream_node"""
         with self._subscribe_lock, upstream_node._subscribe_lock:
             if upstream_node not in self._upstreams:

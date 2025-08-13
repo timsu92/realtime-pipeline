@@ -67,7 +67,7 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
             upstream_node._last_downstream_gots[self] = -1
             self._upstreams.append(upstream_node)
 
-    @deprecated(deprecated_in="0.3.0", details="Use `unsubscribe_to` instead.")
+    @deprecated(deprecated_in="0.3.0", details="Use `unsubscribe_from` instead.")
     def unsubscribe(self, subscriber: "Node"):
         """Downstream node unsubscribe from this node."""
         with self._subscribe_lock, subscriber._subscribe_lock:

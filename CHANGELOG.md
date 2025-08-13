@@ -1,3 +1,23 @@
+## v0.3.0 (2025-08-14)
+
+### BREAKING CHANGE
+
+- Before, target function need to unpack data from upstream. Now, these data is unpacked in advance
+- upstream.subscribe(downstream) will be removed in the future
+
+### Feat
+
+- **node**: change subscription's direction
+
+### Fix
+
+- **node**: add type hints and expand arguments in target function
+- **node**: show precise information if no job is provided
+
+### Refactor
+
+- **node**: mark Timestamp as type alias
+
 ## v0.2.0 (2025-08-07)
 
 ### Feat

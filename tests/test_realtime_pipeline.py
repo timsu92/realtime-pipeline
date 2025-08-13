@@ -1,22 +1,19 @@
-from random import randint
-import unittest
 import threading
 import time
+import unittest
+from random import randint
+
 from realtime_pipeline import Node
 
 
-def simple_processor(data):
+def simple_processor(*data):
     """Simple processor that converts string to uppercase"""
-    if isinstance(data, list):
-        return [str(d).upper() for d in data]
-    return str(data).upper()
+    return [str(d).upper() for d in data]
 
 
-def sum_processor(data):
+def sum_processor(*data):
     """Simple processor that sums numeric data"""
-    if isinstance(data, list):
-        return sum(float(d) for d in data)
-    return float(data)
+    return sum(float(d) for d in data)
 
 
 class BasicNodeFunctions(unittest.TestCase):
@@ -26,7 +23,7 @@ class BasicNodeFunctions(unittest.TestCase):
         # Simple one-to-one relationship setup
         self.upstream = Node(target=lambda _: "dummy")
         self.downstream = Node(target=simple_processor)
-        self.upstream.subscribe(self.downstream)
+        self.downstream.subscribe_to(self.upstream)
 
         # Manually provide some test data for the upstream node
         self.upstream._data[1.0] = "test_data_1"
@@ -39,7 +36,7 @@ class BasicNodeFunctions(unittest.TestCase):
         self.assertEqual(self.upstream._last_downstream_gots[self.downstream], -1)
 
     def test_unsubscribe(self):
-        self.upstream.unsubscribe(self.downstream)
+        self.downstream.unsubscribe_from(self.upstream)
         self.assertNotIn(self.downstream, self.upstream._last_downstream_gots)
         self.assertNotIn(self.upstream, self.downstream._upstreams)
 
@@ -135,7 +132,7 @@ class TestNodeOneToOne(unittest.TestCase):
         # Create a simple one-to-one relationship
         self.upstream = Node(target=lambda _: "dummy")
         self.downstream = Node(target=simple_processor)
-        self.upstream.subscribe(self.downstream)
+        self.downstream.subscribe_to(self.upstream)
 
         # Manually provide some test data for the upstream node
         self.upstream._data[1.0] = "test_data_1"
@@ -199,9 +196,9 @@ class TestNodeMultipleUpstreams(unittest.TestCase):
         )
 
         # Subscribe downstream to all upstreams
-        self.up1.subscribe(self.downstream)
-        self.up2.subscribe(self.downstream)
-        self.up3.subscribe(self.downstream)
+        self.downstream.subscribe_to(self.up1)
+        self.downstream.subscribe_to(self.up2)
+        self.downstream.subscribe_to(self.up3)
 
         # Provide test data for all upstreams
         self.up1._data.update({1.0: "a1", 2.0: "a2", 3.0: "a3"})
@@ -214,7 +211,7 @@ class TestNodeMultipleUpstreams(unittest.TestCase):
         # The algorithm will find the minimum value of the last timestamps, which is min(3.0, 3.1, 3.2) = 3.0
         # Then it will locate the data closest to 3.0 in each upstream.
         self.assertEqual(ts, 3.0)
-        self.assertEqual(datas, ["a3", "b3", "c3"])
+        self.assertEqual(datas, ("a3", "b3", "c3"))
 
     def test_acceptable_time_bias_strict(self):
         """Test strict time tolerance range causing waiting"""
@@ -233,13 +230,13 @@ class TestNodeMultipleUpstreams(unittest.TestCase):
         self.downstream.acceptable_time_bias = 0.5
         datas, ts = self.downstream._get_from_upstream()
         self.assertEqual(ts, 3.0)
-        self.assertEqual(datas, ["a3", "b3", "c3"])
+        self.assertEqual(datas, ("a3", "b3", "c3"))
 
     def test_data_order_consistency_after_new_data_arrives(self):
         # The first call will consume the latest data
         datas1, ts1 = self.downstream._get_from_upstream()
         self.assertEqual(ts1, 3.0)
-        self.assertEqual(datas1, ["a3", "b3", "c3"])
+        self.assertEqual(datas1, ("a3", "b3", "c3"))
 
         # During the second call, since the data has already been consumed, the upstream node's _last_downstream_gots will be updated
         # This means no new data is available unless we add new data
@@ -253,7 +250,7 @@ class TestNodeMultipleUpstreams(unittest.TestCase):
 
         datas2, ts2 = self.downstream._get_from_upstream()
         self.assertEqual(ts2, 4.0)  # min(4.0, 4.1, 4.2) = 4.0
-        self.assertEqual(datas2, ["a4", "b4", "c4"])
+        self.assertEqual(datas2, ("a4", "b4", "c4"))
         self.assertGreater(ts2, ts1)
         self.assertNotEqual(datas1, datas2)
 
@@ -272,11 +269,11 @@ class TestNodeMultipleToMultiple(unittest.TestCase):
             # Create randomness on number of concurrent subscribers
             chunk = randint(0, len(self.upstreams) - 1)
             for upstream in self.upstreams[:chunk]:
-                upstream.subscribe(downstream)
-                upstream.unsubscribe(downstream)
+                downstream.subscribe_to(upstream)
+                downstream.unsubscribe_from(upstream)
             for upstream in self.upstreams[chunk:]:
-                upstream.subscribe(downstream)
-                upstream.unsubscribe(downstream)
+                downstream.subscribe_to(upstream)
+                downstream.unsubscribe_from(upstream)
 
         threads = [
             threading.Thread(target=subscribe_and_unsubscribe, args=(downstream,))
@@ -311,7 +308,7 @@ class TestNodeEdgeCases(unittest.TestCase):
         """Test behavior when upstream nodes have no data"""
         upstream = Node(target=lambda _: "data")
         downstream = Node(target=lambda x: x)
-        upstream.subscribe(downstream)
+        downstream.subscribe_to(upstream)
 
         # When upstream has no data, downstream queries should wait
         def add_data_later():
@@ -335,18 +332,18 @@ class TestNodeEdgeCases(unittest.TestCase):
 
         # Attempting to unsubscribe from a node that was not subscribed should not be accepted
         with self.assertRaises((KeyError, ValueError)):
-            node1.unsubscribe(node2)
+            node2.unsubscribe_from(node1)
 
     def test_duplicate_subscription(self):
         """Test that duplicate subscriptions raise an error"""
         upstream = Node(target=lambda _: "data")
         downstream = Node(target=lambda x: x)
 
-        upstream.subscribe(downstream)
+        downstream.subscribe_to(upstream)
 
         # Duplicate subscriptions should raise ValueError
         with self.assertRaises(ValueError):
-            upstream.subscribe(downstream)
+            downstream.subscribe_to(upstream)
 
         # Ensure there is only one subscription record
         self.assertEqual(len(upstream._last_downstream_gots), 1)

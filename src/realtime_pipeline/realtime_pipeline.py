@@ -1,20 +1,31 @@
 import threading
 from bisect import bisect_left
-from typing import Any, Callable, Generic, Iterable, Mapping, Optional, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Generic,
+    Iterable,
+    Mapping,
+    Optional,
+    TypeVar,
+)
 
+from deprecation import deprecated
 from readerwriterlock import rwlock
 from sortedcontainers import SortedDict
+from typing_extensions import TypeAlias, TypeVarTuple, Unpack
 
-Timestamp = float
+Timestamp: TypeAlias = float
 
-Data = TypeVar("Data")
+UpstreamT = TypeVarTuple("UpstreamT")
+DownstreamT = TypeVar("DownstreamT")
 
 
-class Node(Generic[Data], threading.Thread):
+class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
     def __init__(
         self,
         acceptable_time_bias=1.5,
-        target: Optional[Callable] = None,
+        target: Optional[Callable[[Unpack[UpstreamT]], DownstreamT]] = None,
         args: Iterable[Any] = (),
         kwargs: Optional[Mapping[str, Any]] = None,
         *,
@@ -22,18 +33,22 @@ class Node(Generic[Data], threading.Thread):
         daemon: Optional[bool] = None,
     ) -> None:
         super().__init__(name=name, args=args, kwargs=kwargs, daemon=daemon)
-        self.acceptable_time_bias = acceptable_time_bias
-        self.target = target
-
+        # data access
+        self._data_lock = rwlock.RWLockFair()
         self._data = SortedDict()
+        self._new_data_available = threading.Event()
         """ Timestamp -> Data """
 
-        self._data_lock = rwlock.RWLockFair()
+        # node connections
         self._last_downstream_gots: dict[Node, Timestamp] = {}
         self._subscribe_lock = threading.Lock()
         self._upstreams: list[Node] = []
-        self._new_data_available = threading.Event()
+        self.acceptable_time_bias = acceptable_time_bias
 
+        # job
+        self.target = target
+
+    @deprecated(deprecated_in="0.3.0", details="Use `subscribe_to` instead.")
     def subscribe(self, subscriber: "Node"):
         """Downstream node subscribe to this node and receive data from this node."""
         with self._subscribe_lock, subscriber._subscribe_lock:
@@ -44,11 +59,28 @@ class Node(Generic[Data], threading.Thread):
             self._last_downstream_gots[subscriber] = -1
             subscriber._upstreams.append(self)
 
+    def subscribe_to(self, upstream_node: "Node"):
+        """Subscribes this node to a upstream_node"""
+        with self._subscribe_lock, upstream_node._subscribe_lock:
+            if upstream_node in self._upstreams:
+                raise ValueError(f"Node {self} already subscribed to {upstream_node}")
+            upstream_node._last_downstream_gots[self] = -1
+            self._upstreams.append(upstream_node)
+
+    @deprecated(deprecated_in="0.3.0", details="Use `unsubscribe_from` instead.")
     def unsubscribe(self, subscriber: "Node"):
         """Downstream node unsubscribe from this node."""
         with self._subscribe_lock, subscriber._subscribe_lock:
             self._last_downstream_gots.pop(subscriber)
             subscriber._upstreams.remove(self)
+
+    def unsubscribe_from(self, upstream_node: "Node"):
+        """Unsubscribes this node from a upstream_node"""
+        with self._subscribe_lock, upstream_node._subscribe_lock:
+            if upstream_node not in self._upstreams:
+                raise ValueError(f"Node {self} not subscribed to {upstream_node}")
+            upstream_node._last_downstream_gots.pop(self)
+            self._upstreams.remove(upstream_node)
 
     def _query_availables(self, downstream: "Node", block=True) -> list[Timestamp]:
         """Tries to query available data timestamps for the downstream node.
@@ -67,13 +99,13 @@ class Node(Generic[Data], threading.Thread):
         read_lock.release()
         return availables
 
-    def _give_data(self, timestamp: Timestamp, subscriber: "Node") -> Data:
+    def _give_data(self, timestamp: Timestamp, subscriber: "Node") -> DownstreamT:
         # thread-safe
         data = self._data[timestamp]
         self._last_downstream_gots[subscriber] = timestamp
         return data
 
-    def _get_from_upstream(self) -> tuple[list, Timestamp]:
+    def _get_from_upstream(self) -> tuple[tuple[Unpack[UpstreamT]], Timestamp]:
         # The timestamps of processed data available from upstream nodes
         while True:
             availables = [up._query_availables(self) for up in self._upstreams]
@@ -98,10 +130,10 @@ class Node(Generic[Data], threading.Thread):
                 continue
 
             # Time alignment successful, retrieve data
-            datas = [
+            datas = tuple(
                 up._give_data(avai[idx], self)
                 for up, avai, idx in zip(self._upstreams, availables, nearest_index)
-            ]
+            )
             return datas, min_of_latests
 
     def _cleanup_old_data(self):
@@ -124,7 +156,12 @@ class Node(Generic[Data], threading.Thread):
             datas, timestamp = self._get_from_upstream()
 
             # ...perform the tasks this node is supposed to do...
-            result = self.target(datas)
+            if self.target is None:
+                raise NotImplementedError(
+                    f"Nothing specified to run in this node {self.name}."
+                    "Please either set a target function when initializing or override the `run` method."
+                )
+            result = self.target(*datas)
 
             self._data[timestamp] = result
             self._new_data_available.set()

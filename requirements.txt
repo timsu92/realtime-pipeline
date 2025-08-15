@@ -278,6 +278,12 @@ ruff==0.12.8 \
 sortedcontainers==2.4.0 \
     --hash=sha256:25caa5a06cc30b6b83d11423433f65d1f9d76c4c6a0c90e3379eaa43b9bfdb88 \
     --hash=sha256:a163dcaede0f1c021485e957a39245190e74249897e2ae4b2aa38595db237ee0
+    # via
+    #   realtime-pipeline
+    #   sortedcontainers-stubs
+sortedcontainers-stubs==2.4.3 \
+    --hash=sha256:4496109dfa6645e4b675f57fbc7e42ec4d1bed2c74aab7fa379e0795e49fe406 \
+    --hash=sha256:ba172daceda4bd617d2f6ffd24582261a494da92705409651967faa40ebc75dd
     # via realtime-pipeline
 termcolor==3.1.0 \
     --hash=sha256:591dd26b5c2ce03b9e43f391264626557873ce1d379019786f99b0c2bee140aa \
@@ -294,6 +300,7 @@ typing-extensions==4.14.1 \
     #   commitizen
     #   readerwriterlock
     #   realtime-pipeline
+    #   sortedcontainers-stubs
 vermin==1.6.0 \
     --hash=sha256:6266ca02f55d1c2aa189a610017c132eb2d1934f09e72a955b1eb3820ee6d4ef \
     --hash=sha256:f1fa9ee40f59983dc40e0477eb2b1fa8061a3df4c3b2bcf349add462a5610efb

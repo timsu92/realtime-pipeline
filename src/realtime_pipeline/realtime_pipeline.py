@@ -35,9 +35,8 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         super().__init__(name=name, args=args, kwargs=kwargs, daemon=daemon)
         # data access
         self._data_lock = rwlock.RWLockFair()
-        self._data = SortedDict()
+        self._data = SortedDict[Timestamp, DownstreamT]()
         self._new_data_available = threading.Event()
-        """ Timestamp -> Data """
 
         # node connections
         self._last_downstream_gots: dict[Node, Timestamp] = {}

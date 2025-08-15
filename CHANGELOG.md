@@ -1,3 +1,9 @@
+## v0.3.1 (2025-08-15)
+
+### Fix
+
+- **node**: add type for data storage
+
 ## v0.3.0 (2025-08-14)
 
 ### BREAKING CHANGE

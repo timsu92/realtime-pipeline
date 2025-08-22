@@ -2,7 +2,7 @@ name: Update uv.lock if dependabot update requirements.txt only
 
 on:
   pull_request:
-    types: [opened, synchronize]
+    types: [opened, synchronize, reopened]
     branches: ["dependabot/uv/*"]
     paths:
       - "requirements.txt"

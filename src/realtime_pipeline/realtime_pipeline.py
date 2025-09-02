@@ -50,13 +50,7 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
     @deprecated(deprecated_in="0.3.0", details="Use `subscribe_to` instead.")
     def subscribe(self, subscriber: "Node"):
         """Downstream node subscribe to this node and receive data from this node."""
-        with self._subscribe_lock, subscriber._subscribe_lock:
-            if subscriber in self._last_downstream_gots:
-                raise ValueError(
-                    f"Subscriber {subscriber} already subscribed to {self}"
-                )
-            self._last_downstream_gots[subscriber] = -1
-            subscriber._upstreams.append(self)
+        return subscriber.subscribe_to(self)
 
     def subscribe_to(self, upstream_node: "Node"):
         """Subscribes this node to a upstream_node"""
@@ -69,9 +63,7 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
     @deprecated(deprecated_in="0.3.0", details="Use `unsubscribe_from` instead.")
     def unsubscribe(self, subscriber: "Node"):
         """Downstream node unsubscribe from this node."""
-        with self._subscribe_lock, subscriber._subscribe_lock:
-            self._last_downstream_gots.pop(subscriber)
-            subscriber._upstreams.remove(self)
+        return subscriber.unsubscribe_from(self)
 
     def unsubscribe_from(self, upstream_node: "Node"):
         """Unsubscribes this node from a upstream_node"""

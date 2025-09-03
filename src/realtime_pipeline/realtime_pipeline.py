@@ -137,6 +137,14 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
             while len(self._data) > 0 and self._data.keys()[0] <= threshold:
                 self._data.popitem(0)
 
+    def _before_target(self):
+        return self._get_from_upstream()
+
+    def _after_target(self, result: DownstreamT, timestamp: Timestamp):
+        self._data[timestamp] = result
+        self._new_data_available.set()
+        self._cleanup_old_data()
+
     # Retrieve data from upstream, process it, and clean up outdated data
     def run(self):
         if not callable(self.target):
@@ -144,14 +152,12 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
                 "Target must be a callable function when initializing or `run` must be overridden."
             )
         while True:
-            datas, timestamp = self._get_from_upstream()
+            datas, timestamp = self._before_target()
 
             # ...perform the tasks this node is supposed to do...
             result = self.target(*datas)
 
-            self._data[timestamp] = result
-            self._new_data_available.set()
-            self._cleanup_old_data()
+            self._after_target(result, timestamp)
 
     def _wait_for_any_upstream_data(self):
         """Wait for new data to be available from any upstream node"""

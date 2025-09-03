@@ -147,11 +147,6 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
             datas, timestamp = self._get_from_upstream()
 
             # ...perform the tasks this node is supposed to do...
-            if self.target is None:
-                raise NotImplementedError(
-                    f"Nothing specified to run in this node {self.name}."
-                    "Please either set a target function when initializing or override the `run` method."
-                )
             result = self.target(*datas)
 
             self._data[timestamp] = result

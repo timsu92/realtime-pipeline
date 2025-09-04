@@ -42,6 +42,11 @@ Repository = "https://github.com/timsu92/realtime-pipeline"
 Issues = "https://github.com/timsu92/realtime-pipeline/issues"
 Changelog = "https://github.com/timsu92/realtime-pipeline/blob/main/CHANGELOG.md"
 
+[project.optional-dependencies]
+progress = [
+    "rich>=14.1.0"
+]
+
 
 [build-system]
 requires = ["uv_build>=0.8.3,<0.9.0"]
@@ -53,6 +58,7 @@ dev = [
     "pre-commit>=3.2.0",
     "ruff>=0.12.5",
     "vermin>=1.6.0",
+    "realtime-pipeline[progress]",
 ]
 
 [tool.commitizen]

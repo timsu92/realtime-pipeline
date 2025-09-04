@@ -1,6 +1,7 @@
 import threading
 from bisect import bisect_left
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Generic,
@@ -14,6 +15,9 @@ from deprecation import deprecated
 from readerwriterlock import rwlock
 from sortedcontainers import SortedDict
 from typing_extensions import TypeAlias, TypeVarTuple, Unpack
+
+if TYPE_CHECKING:
+    from realtime_pipeline.manager.progress import ProgressManager
 
 Timestamp: TypeAlias = float
 
@@ -31,6 +35,7 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         *,
         name: Optional[str] = None,
         daemon: Optional[bool] = None,
+        progress_manager: Optional["ProgressManager"] = None,
     ) -> None:
         super().__init__(name=name, args=args, kwargs=kwargs, daemon=daemon)
         # data access
@@ -46,6 +51,9 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
 
         # job
         self.target = target
+
+        # context manager
+        self.progress_manager = progress_manager
 
     @deprecated(deprecated_in="0.3.0", details="Use `subscribe_to` instead.")
     def subscribe(self, subscriber: "Node"):
@@ -144,6 +152,8 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         self._data[timestamp] = result
         self._new_data_available.set()
         self._cleanup_old_data()
+        if self.progress_manager:
+            self.progress_manager.update_progress(self.name, self, timestamp)
 
     # Retrieve data from upstream, process it, and clean up outdated data
     def run(self):

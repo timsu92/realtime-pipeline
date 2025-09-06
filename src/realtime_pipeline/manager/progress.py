@@ -67,12 +67,13 @@ class ProgressManager:
 
             now = time.time()
 
-            # Calculate speed of process within 5 seconds
-            cutoff_time = now - 5.0
+            # Calculate speed of process within 2.5 seconds or last 3 timestamps, whichever is more
+            cutoff_time = now - 2.5
+            cutoff_index = bisect(node_info.timestamp, cutoff_time)
+            if len(node_info.timestamp) - cutoff_index < 3:
+                cutoff_index = max(0, len(node_info.timestamp) - 3)
 
-            node_info.timestamp = node_info.timestamp[
-                bisect(node_info.timestamp, cutoff_time) :
-            ]
+            node_info.timestamp = node_info.timestamp[cutoff_index:]
 
             # Record timestamp
             node_info.timestamp.append(now)

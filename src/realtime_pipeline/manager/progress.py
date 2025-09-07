@@ -83,6 +83,10 @@ class ProgressManager:
             # Record timestamp
             node_info.timestamp.append(now)
 
+        # stop if not started
+        if not self._progress.live.is_started:
+            return
+
         # Calculate process speed (Hz)
         if len(node_info.timestamp) > 1:
             time_span = node_info.timestamp[-1] - node_info.timestamp[0]

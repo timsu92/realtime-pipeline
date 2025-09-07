@@ -153,7 +153,9 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         self._new_data_available.set()
         self._cleanup_old_data()
         if self.progress_manager:
-            self.progress_manager.update_progress(self.name, self, timestamp)
+            self.progress_manager.update_progress(
+                node=self, process_timestamp=timestamp
+            )
 
     # Retrieve data from upstream, process it, and clean up outdated data
     def run(self):

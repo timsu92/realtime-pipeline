@@ -45,7 +45,7 @@ class ProgressManager:
         self._render_lock = threading.Lock()
         self._start_time = time.time()
 
-    def add_node(self, name: Optional[str], node: "Node"):
+    def add_node(self, node: "Node", name: Optional[str] = None):
         if name is None:
             name = node.name
         task_id = self._progress.add_task(
@@ -58,7 +58,12 @@ class ProgressManager:
         self._nodes_info[(name, node)] = _NodeInfo(task_id=task_id, timestamp=[])
         node.progress_manager = self
 
-    def update_progress(self, name: str, node: "Node", process_timestamp: float):
+    def update_progress(
+        self, *, name: Optional[str] = None, node: "Node", process_timestamp: float
+    ):
+        if name is None:
+            name = node.name
+
         with self._data_lock:
             if (name, node) not in self._nodes_info:
                 # just ignore

@@ -100,3 +100,25 @@ class BasicProgressFunctions(unittest.TestCase):
                 now - 0.0,
                 delta=0.01,
             )
+
+    def test_remove_nonexist_node(self):
+        self.pm.remove_node(Node())  # should not raise
+
+    def test_add_node(self):
+        node = Node(name="node name")
+        self.pm.add_node(node)
+        self.assertEqual(len(self.pm._nodes_info), 1)
+        self.assertIn((node.name, node), self.pm._nodes_info.keys())
+        self.assertEqual(len(self.pm._progress.tasks), 1)
+        self.assertIn(
+            self.pm._nodes_info[(node.name, node)].task_id, self.pm._progress.task_ids
+        )
+        self.assertIs(node.progress_manager, self.pm)
+
+    def test_remove_exist_node(self):
+        node = Node(name="node name")
+        self.pm.add_node(node)
+        self.pm.remove_node(node)
+        self.assertEqual(len(self.pm._nodes_info), 0)
+        self.assertEqual(len(self.pm._progress.tasks), 0)
+        self.assertIsNone(node.progress_manager)

@@ -3,14 +3,13 @@ name: Update uv.lock if dependabot update requirements.txt only
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    branches: ["dependabot/uv/*"]
     paths:
       - "requirements.txt"
 
 jobs:
   update_uv_lock:
     runs-on: ubuntu-latest
-    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.ref_type == 'branch' && startsWith(github.head_ref, 'dependabot/uv/')
     steps:
       - name: Checkout code
         uses: actions/checkout@v5

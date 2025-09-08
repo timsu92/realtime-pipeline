@@ -170,3 +170,5 @@ class ProgressManager:
         exc_tb: Optional["TracebackType"],
     ):
         self.stop()
+        for name, node in tuple(self._nodes_info.keys()):
+            self.remove_node(node, name)

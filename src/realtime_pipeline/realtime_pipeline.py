@@ -1,4 +1,5 @@
 import threading
+import weakref
 from bisect import bisect_left
 from typing import (
     TYPE_CHECKING,
@@ -53,7 +54,19 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         self.target = target
 
         # context manager
-        self.progress_manager = progress_manager
+        self._progress_manager_ref = (
+            weakref.ref(progress_manager) if progress_manager else None
+        )
+
+    @property
+    def progress_manager(self) -> Optional["ProgressManager"]:
+        """Get the progress manager, if still alive"""
+        return self._progress_manager_ref() if self._progress_manager_ref else None
+
+    @progress_manager.setter
+    def progress_manager(self, value: Optional["ProgressManager"]) -> None:
+        """Set the progress manager using weak reference"""
+        self._progress_manager_ref = weakref.ref(value) if value else None
 
     @deprecated(deprecated_in="0.3.0", details="Use `subscribe_to` instead.")
     def subscribe(self, subscriber: "Node"):

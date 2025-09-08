@@ -48,7 +48,7 @@ class ProgressManager:
     def add_node(self, node: "Node", name: Optional[str] = None):
         if name is None:
             name = node.name
-        task_id = self._progress.add_task(
+        task_id = self._progress.add_task(  # There's an RLock in Rich already
             name,
             total=100,  # 100 means the task is the most responsive one, and will get a green bar
             rate="N/A",
@@ -58,6 +58,26 @@ class ProgressManager:
         with self._data_lock:
             self._nodes_info[(name, node)] = _NodeInfo(task_id=task_id, timestamp=[])
         node.progress_manager = self
+
+    def remove_node(self, node: "Node", name: Optional[str] = None):
+        if name is None:
+            name = node.name
+
+        node.progress_manager = None
+
+        # ignore if node not found
+        try:
+            self._progress.remove_task(
+                self._nodes_info[(name, node)].task_id
+            )  # There's an RLock in Rich already
+        except KeyError:
+            pass
+
+        with self._data_lock:
+            try:
+                del self._nodes_info[(name, node)]
+            except KeyError:
+                pass
 
     def update_progress(
         self, *, name: Optional[str] = None, node: "Node", process_timestamp: float
@@ -118,13 +138,16 @@ class ProgressManager:
             progress_percent = 0
 
         with self._render_lock:
-            self._progress.update(
-                node_info.task_id,
-                completed=progress_percent,
-                rate=f"{rate:.1f}",
-                lag=f"{lag_ms:.0f}",
-                timestamp=f"{process_timestamp - self._start_time:.3f}",
-            )
+            try:
+                self._progress.update(
+                    node_info.task_id,
+                    completed=progress_percent,
+                    rate=f"{rate:.1f}",
+                    lag=f"{lag_ms:.0f}",
+                    timestamp=f"{process_timestamp - self._start_time:.3f}",
+                )
+            except KeyError:  # Possible update after delete task
+                pass
 
     def start(self):
         """Start the progress display."""

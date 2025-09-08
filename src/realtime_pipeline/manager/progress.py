@@ -55,7 +55,8 @@ class ProgressManager:
             lag="N/A",
             timestamp="N/A",
         )
-        self._nodes_info[(name, node)] = _NodeInfo(task_id=task_id, timestamp=[])
+        with self._data_lock:
+            self._nodes_info[(name, node)] = _NodeInfo(task_id=task_id, timestamp=[])
         node.progress_manager = self
 
     def update_progress(

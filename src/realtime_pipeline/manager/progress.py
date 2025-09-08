@@ -7,7 +7,6 @@ import threading
 import time
 from bisect import bisect
 from dataclasses import dataclass
-from types import TracebackType
 from typing import TYPE_CHECKING, Optional, Type
 
 try:
@@ -19,6 +18,8 @@ except ImportError as e:
     ) from e
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     from realtime_pipeline.realtime_pipeline import Node
 
 
@@ -166,6 +167,6 @@ class ProgressManager:
         self,
         exc_type: Optional[Type[BaseException]],
         exc_val: Optional[BaseException],
-        exc_tb: Optional[TracebackType],
+        exc_tb: Optional["TracebackType"],
     ):
         self.stop()

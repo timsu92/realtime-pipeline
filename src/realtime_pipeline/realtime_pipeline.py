@@ -1,6 +1,8 @@
 import threading
+import weakref
 from bisect import bisect_left
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Generic,
@@ -14,6 +16,9 @@ from deprecation import deprecated
 from readerwriterlock import rwlock
 from sortedcontainers import SortedDict
 from typing_extensions import TypeAlias, TypeVarTuple, Unpack
+
+if TYPE_CHECKING:
+    from realtime_pipeline.manager.progress import ProgressManager
 
 Timestamp: TypeAlias = float
 
@@ -31,6 +36,7 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         *,
         name: Optional[str] = None,
         daemon: Optional[bool] = None,
+        progress_manager: Optional["ProgressManager"] = None,
     ) -> None:
         super().__init__(name=name, args=args, kwargs=kwargs, daemon=daemon)
         # data access
@@ -47,16 +53,25 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         # job
         self.target = target
 
+        # context manager
+        self._progress_manager_ref = (
+            weakref.ref(progress_manager) if progress_manager else None
+        )
+
+    @property
+    def progress_manager(self) -> Optional["ProgressManager"]:
+        """Get the progress manager, if still alive"""
+        return self._progress_manager_ref() if self._progress_manager_ref else None
+
+    @progress_manager.setter
+    def progress_manager(self, value: Optional["ProgressManager"]) -> None:
+        """Set the progress manager using weak reference"""
+        self._progress_manager_ref = weakref.ref(value) if value else None
+
     @deprecated(deprecated_in="0.3.0", details="Use `subscribe_to` instead.")
     def subscribe(self, subscriber: "Node"):
         """Downstream node subscribe to this node and receive data from this node."""
-        with self._subscribe_lock, subscriber._subscribe_lock:
-            if subscriber in self._last_downstream_gots:
-                raise ValueError(
-                    f"Subscriber {subscriber} already subscribed to {self}"
-                )
-            self._last_downstream_gots[subscriber] = -1
-            subscriber._upstreams.append(self)
+        return subscriber.subscribe_to(self)
 
     def subscribe_to(self, upstream_node: "Node"):
         """Subscribes this node to a upstream_node"""
@@ -69,9 +84,7 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
     @deprecated(deprecated_in="0.3.0", details="Use `unsubscribe_from` instead.")
     def unsubscribe(self, subscriber: "Node"):
         """Downstream node unsubscribe from this node."""
-        with self._subscribe_lock, subscriber._subscribe_lock:
-            self._last_downstream_gots.pop(subscriber)
-            subscriber._upstreams.remove(self)
+        return subscriber.unsubscribe_from(self)
 
     def unsubscribe_from(self, upstream_node: "Node"):
         """Unsubscribes this node from a upstream_node"""
@@ -145,6 +158,18 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
             while len(self._data) > 0 and self._data.keys()[0] <= threshold:
                 self._data.popitem(0)
 
+    def _before_target(self):
+        return self._get_from_upstream()
+
+    def _after_target(self, result: DownstreamT, timestamp: Timestamp):
+        self._data[timestamp] = result
+        self._new_data_available.set()
+        self._cleanup_old_data()
+        if self.progress_manager:
+            self.progress_manager.update_progress(
+                node=self, process_timestamp=timestamp
+            )
+
     # Retrieve data from upstream, process it, and clean up outdated data
     def run(self):
         if not callable(self.target):
@@ -152,19 +177,12 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
                 "Target must be a callable function when initializing or `run` must be overridden."
             )
         while True:
-            datas, timestamp = self._get_from_upstream()
+            datas, timestamp = self._before_target()
 
             # ...perform the tasks this node is supposed to do...
-            if self.target is None:
-                raise NotImplementedError(
-                    f"Nothing specified to run in this node {self.name}."
-                    "Please either set a target function when initializing or override the `run` method."
-                )
             result = self.target(*datas)
 
-            self._data[timestamp] = result
-            self._new_data_available.set()
-            self._cleanup_old_data()
+            self._after_target(result, timestamp)
 
     def _wait_for_any_upstream_data(self):
         """Wait for new data to be available from any upstream node"""

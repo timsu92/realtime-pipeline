@@ -1,3 +1,4 @@
+import gc
 import time
 import unittest
 
@@ -23,8 +24,9 @@ class BasicProgressFunctions(unittest.TestCase):
         node = Node()
         with self.pm:
             self.pm.update_progress(node=node, process_timestamp=time.time())
-        self.assertEqual(len(self.pm._nodes_info), 0)
-        self.assertEqual(len(self.pm._progress.tasks), 0)
+            self.assertEqual(len(self.pm._nodes_info), 0)
+            self.assertEqual(len(self.pm._progress.tasks), 0)
+            self.assertIsNone(node.progress_manager)
 
     def test_save_registered_node(self):
         node = Node()
@@ -34,10 +36,10 @@ class BasicProgressFunctions(unittest.TestCase):
         now = time.time()
         with self.pm:
             self.pm.update_progress(node=node, process_timestamp=now)
-        self.assertEqual(len(self.pm._nodes_info[(node.name, node)].timestamp), 1)
-        self.assertAlmostEqual(
-            self.pm._nodes_info[(node.name, node)].timestamp[0], now, delta=0.01
-        )
+            self.assertEqual(len(self.pm._nodes_info[(node.name, node)].timestamp), 1)
+            self.assertAlmostEqual(
+                self.pm._nodes_info[(node.name, node)].timestamp[0], now, delta=0.01
+            )
 
     def test_calculate_all_data_within_timeframe(self):
         node = Node()
@@ -121,4 +123,19 @@ class BasicProgressFunctions(unittest.TestCase):
         self.pm.remove_node(node)
         self.assertEqual(len(self.pm._nodes_info), 0)
         self.assertEqual(len(self.pm._progress.tasks), 0)
+        self.assertIsNone(node.progress_manager)
+
+    def test_autoremove_nodes_upon_exiting_context(self):
+        node = Node()
+        self.pm.add_node(node)
+        with self.pm:
+            self.assertIn((node.name, node), self.pm._nodes_info.keys())
+        self.assertNotIn((node.name, node), self.pm._nodes_info.keys())
+        self.assertIsNone(node.progress_manager)
+
+    def test_autoremove_nodes_when_deleting_manager(self):
+        node = Node()
+        self.pm.add_node(node)
+        del self.pm
+        gc.collect()
         self.assertIsNone(node.progress_manager)

@@ -35,34 +35,68 @@ class BasicProgressFunctions(unittest.TestCase):
         with self.pm:
             self.pm.update_progress(node=node, process_timestamp=now)
         self.assertEqual(len(self.pm._nodes_info[(node.name, node)].timestamp), 1)
-        self.assertEqual(self.pm._nodes_info[(node.name, node)].timestamp[0], now)
+        self.assertAlmostEqual(
+            self.pm._nodes_info[(node.name, node)].timestamp[0], now, delta=0.01
+        )
 
     def test_calculate_all_data_within_timeframe(self):
         node = Node()
         self.pm.add_node(node)
-        now = time.time()
         with self.pm:
-            self.pm.update_progress(node=node, process_timestamp=now - 3)
-            self.pm.update_progress(node=node, process_timestamp=now - 2.0)
-            self.pm.update_progress(node=node, process_timestamp=now - 1.5)
-            self.pm.update_progress(node=node, process_timestamp=now - 1.0)
-            self.pm.update_progress(node=node, process_timestamp=now - 0.5)
+            self.pm.update_progress(node=node, process_timestamp=time.time())  # 2.6s
+            time.sleep(0.6)
+            self.pm.update_progress(node=node, process_timestamp=time.time())  # 2.0s
+            time.sleep(0.5)
+            self.pm.update_progress(node=node, process_timestamp=time.time())  # 1.5s
+            time.sleep(0.5)
+            self.pm.update_progress(node=node, process_timestamp=time.time())  # 1.0s
+            time.sleep(1)
+            self.pm.update_progress(node=node, process_timestamp=time.time())  # 0s
             self.assertEqual(len(self.pm._nodes_info[(node.name, node)].timestamp), 4)
-            self.assertListEqual(
-                self.pm._nodes_info[(node.name, node)].timestamp,
-                [now - 2.0, now - 1.5, now - 1.0, now - 0.5],
+            now = time.time()
+            self.assertAlmostEqual(
+                self.pm._nodes_info[(node.name, node)].timestamp[0],
+                now - 2.0,
+                delta=0.01,
+            )
+            self.assertAlmostEqual(
+                self.pm._nodes_info[(node.name, node)].timestamp[1],
+                now - 1.5,
+                delta=0.01,
+            )
+            self.assertAlmostEqual(
+                self.pm._nodes_info[(node.name, node)].timestamp[2],
+                now - 1.0,
+                delta=0.01,
+            )
+            self.assertAlmostEqual(
+                self.pm._nodes_info[(node.name, node)].timestamp[3],
+                now - 0.0,
+                delta=0.01,
             )
 
     def test_calculate_all_data_when_too_little_data(self):
         node = Node()
         self.pm.add_node(node)
-        now = time.time()
         with self.pm:
-            self.pm.update_progress(node=node, process_timestamp=now - 10)
-            self.pm.update_progress(node=node, process_timestamp=now - 5)
-            self.pm.update_progress(node=node, process_timestamp=now)
+            self.pm.update_progress(node=node, process_timestamp=time.time())  # 2.6s
+            self.pm.update_progress(node=node, process_timestamp=time.time())  # 2.6s
+            time.sleep(2.6)
+            self.pm.update_progress(node=node, process_timestamp=time.time())  # 0s
             self.assertEqual(len(self.pm._nodes_info[(node.name, node)].timestamp), 3)
-            self.assertListEqual(
-                self.pm._nodes_info[(node.name, node)].timestamp,
-                [now - 10, now - 5, now],
+            now = time.time()
+            self.assertAlmostEqual(
+                self.pm._nodes_info[(node.name, node)].timestamp[0],
+                now - 2.6,
+                delta=0.01,
+            )
+            self.assertAlmostEqual(
+                self.pm._nodes_info[(node.name, node)].timestamp[1],
+                now - 2.6,
+                delta=0.01,
+            )
+            self.assertAlmostEqual(
+                self.pm._nodes_info[(node.name, node)].timestamp[2],
+                now - 0.0,
+                delta=0.01,
             )

@@ -6,6 +6,10 @@ on:
     paths:
       - "requirements.txt"
 
+concurrency:
+  group: update-requirements-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   update_uv_lock:
     runs-on: ubuntu-latest

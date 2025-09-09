@@ -6,13 +6,21 @@ on:
     paths:
       - "requirements.txt"
 
+concurrency:
+  group: update-requirements-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   update_uv_lock:
     runs-on: ubuntu-latest
     if: github.event.pull_request.user.login == 'dependabot[bot]' && github.ref_type == 'branch' && startsWith(github.head_ref, 'dependabot/uv/')
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6

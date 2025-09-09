@@ -10,6 +10,9 @@ on:
       - "uv.lock"
       - "requirements.txt"
 
+env:
+  UV_VERSION: "0.8.3"
+
 concurrency:
   group: update-requirements-${{ github.ref }}
   cancel-in-progress: true
@@ -40,7 +43,7 @@ jobs:
         if: steps.uv_lock_not_updated.outputs.not_updated == '1'
         uses: astral-sh/setup-uv@v6
         with:
-          version: "0.8.3"
+          version: ${{ env.UV_VERSION }}
           enable-cache: true
           cache-dependency-glob: |
             **/pyproject.toml
@@ -108,7 +111,7 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           # Install a specific version of uv.
-          version: "0.8.3"
+          version: ${{ env.UV_VERSION }}
           enable-cache: true
           cache-dependency-glob: |
             **/pyproject.toml

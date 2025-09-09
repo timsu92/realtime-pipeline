@@ -1,0 +1,157 @@
+name: Update Python lock files
+
+on:
+  push:
+    paths:
+      - "uv.lock"
+      - "requirements.txt"
+  pull_request:
+    paths:
+      - "uv.lock"
+      - "requirements.txt"
+
+env:
+  UV_VERSION: "0.8.3"
+
+concurrency:
+  group: update-requirements-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  update_uv_lock:
+    runs-on: ubuntu-latest
+    name: Update uv.lock if dependabot update requirements.txt only
+    if: github.event.pull_request.user.login == 'dependabot[bot]' && github.ref_type == 'branch' && startsWith(github.head_ref, 'dependabot/uv/')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Check if uv.lock isn't updated
+        id: uv_lock_not_updated
+        run: |
+          if ! git diff --name-only ${{ github.base_ref }}..${{ github.head_ref }} | grep -q "^uv.lock$"; then
+            echo "not_updated=1" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install uv
+        if: steps.uv_lock_not_updated.outputs.not_updated == '1'
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
+
+      - name: Extract package and versions from PR title
+        if: steps.uv_lock_not_updated.outputs.not_updated == '1'
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          # PR title format: chore(deps): bump <package> from <prev_version> to <version>
+          PACKAGE=$(echo "$PR_TITLE" | sed -n 's/.*bump \([^ ]*\) from .*/\1/p')
+          PREV_VERSION=$(echo "$PR_TITLE" | sed -n 's/.* from \([^ ]*\) to .*/\1/p')
+          VERSION=$(echo "$PR_TITLE" | sed -n 's/.* to \([^ ]*\)$/\1/p')
+
+          # Validate extracted values
+          if [ -z "$PACKAGE" ] || [ -z "$PREV_VERSION" ] || [ -z "$VERSION" ]; then
+            echo "Error: Failed to extract package information from PR title: $PR_TITLE"
+            echo "Expected PR title format: chore(deps): bump <package> from <prev_version> to <version>"
+            exit 1
+          fi
+
+          echo "PACKAGE=$PACKAGE" >> $GITHUB_ENV
+          echo "PREV_VERSION=$PREV_VERSION" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Update package with uv
+        if: steps.uv_lock_not_updated.outputs.not_updated == '1'
+        run: |
+          echo updating $PACKAGE to $VERSION
+          uv lock --upgrade-package "$PACKAGE==$VERSION"
+
+      - name: Check if uv.lock has changes
+        if: steps.uv_lock_not_updated.outputs.not_updated == '1'
+        id: req_changed
+        run: |
+          if [ -n "$(git status --porcelain uv.lock)" ]; then
+            echo "changed=1" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.req_changed.outputs.changed == '1'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git pull --ff-only
+          git add uv.lock
+          git commit -m "chore(deps): update uv.lock for $PACKAGE $PREV_VERSION -> $VERSION"
+          git push
+
+
+  update-requirements:
+    runs-on: ubuntu-latest
+    name: Update requirements.txt when uv.lock changes
+    # wait on update_uv_lock, but doesn't care whether it executed successfully
+    needs: update_uv_lock
+    if: always()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          # Install a specific version of uv.
+          version: ${{ env.UV_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
+
+      - name: Change to corresponding branch if on a tag
+        if: github.ref_type == 'tag'
+        run: |
+          git fetch --all
+          # try to find the branch name. Error if on a detached HEAD.
+          BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || true)
+          if [ -z "$BRANCH" ]; then
+            # detached HEAD, find the branch name from the tag
+            BRANCH=$(git branch -r --contains HEAD | grep -v '\->' | grep -v '/HEAD' | head -n 1 | sed 's/^\s*origin\///' -)
+            if [ -z "$BRANCH" ]; then
+              echo "Failed to find branch name for detached HEAD"
+              exit 1
+            fi
+            echo "detached HEAD detected, switching to branch $BRANCH"
+            git switch $BRANCH
+          else
+            echo "Already on branch $BRANCH"
+          fi
+
+      - name: Export requirements.txt
+        run: uv export --format requirements-txt > requirements.txt
+
+      - name: Check if requirements.txt has changes
+        id: req_changed
+        run: |
+          if [ -n "$(git status --porcelain requirements.txt)" ]; then
+            echo "changed=1" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.req_changed.outputs.changed == '1'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git pull --ff-only
+          git add requirements.txt
+          git commit -m "build(pip): update requirements.txt based on changes in uv.lock"
+          git push

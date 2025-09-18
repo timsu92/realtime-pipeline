@@ -169,9 +169,10 @@ class ProgressManager:
 
     @started.setter
     def started(self, value: bool):
-        if value:
+        current_state = self.started
+        if value and not current_state:
             self.start()
-        else:
+        elif not value and current_state:
             self.stop()
 
     def __exit__(

@@ -1,3 +1,31 @@
+## v0.4.0 (2025-09-19)
+
+### Feat
+
+- **progress**: add started property to check status
+- **progress**: make context manager control display only
+- **progress**: remove nodes when exiting context manager
+- **progress**: remove node function
+- **progress,node**: allow name to be given from node's name
+- **progress**: keep longer records to calculate speed
+- **progress**: manager for each node's speed
+
+### Fix
+
+- **progress**: check current state before executing
+- **progress**: lock when adding node
+
+### Refactor
+
+- **node**: organize jobs to do before after target
+- **node**: simplify deprecated function code
+
+### Perf
+
+- **progress**: skip import type-only imports
+- **progress**: skip updates to progress bar if not started
+- **node**: remove extra check
+
 ## v0.3.1 (2025-08-15)
 
 ### Fix

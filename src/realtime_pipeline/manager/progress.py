@@ -163,6 +163,17 @@ class ProgressManager:
         """Stop the progress display."""
         self._progress.stop()
 
+    @property
+    def started(self) -> bool:
+        return self._progress.live.is_started
+
+    @started.setter
+    def started(self, value: bool):
+        if value:
+            self.start()
+        else:
+            self.stop()
+
     def __exit__(
         self,
         exc_type: Optional[Type[BaseException]],

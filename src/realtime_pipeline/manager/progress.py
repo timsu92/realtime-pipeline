@@ -163,6 +163,18 @@ class ProgressManager:
         """Stop the progress display."""
         self._progress.stop()
 
+    @property
+    def started(self) -> bool:
+        return self._progress.live.is_started
+
+    @started.setter
+    def started(self, value: bool):
+        current_state = self.started
+        if value and not current_state:
+            self.start()
+        elif not value and current_state:
+            self.stop()
+
     def __exit__(
         self,
         exc_type: Optional[Type[BaseException]],
@@ -170,5 +182,3 @@ class ProgressManager:
         exc_tb: Optional["TracebackType"],
     ):
         self.stop()
-        for name, node in tuple(self._nodes_info.keys()):
-            self.remove_node(node, name)

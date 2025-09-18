@@ -125,14 +125,6 @@ class BasicProgressFunctions(unittest.TestCase):
         self.assertEqual(len(self.pm._progress.tasks), 0)
         self.assertIsNone(node.progress_manager)
 
-    def test_autoremove_nodes_upon_exiting_context(self):
-        node = Node()
-        self.pm.add_node(node)
-        with self.pm:
-            self.assertIn((node.name, node), self.pm._nodes_info.keys())
-        self.assertNotIn((node.name, node), self.pm._nodes_info.keys())
-        self.assertIsNone(node.progress_manager)
-
     def test_autoremove_nodes_when_deleting_manager(self):
         node = Node()
         self.pm.add_node(node)

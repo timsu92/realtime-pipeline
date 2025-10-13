@@ -41,7 +41,7 @@ jobs:
 
       - name: Install uv
         if: steps.uv_lock_not_updated.outputs.not_updated == '1'
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
           enable-cache: true
@@ -108,7 +108,7 @@ jobs:
           ref: ${{ github.head_ref }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v7
         with:
           # Install a specific version of uv.
           version: ${{ env.UV_VERSION }}

@@ -350,5 +350,114 @@ class TestNodeEdgeCases(unittest.TestCase):
         self.assertEqual(len(downstream._upstreams), 1)
 
 
+class TestNodeIncorrectConnection(unittest.TestCase):
+    """Test behavior when nodes have incorrect upstream or downstream connections"""
+
+    def test_no_upstream_no_type_hint_wait(self):
+        """Test behavior when there are no upstream nodes and no type hint and wait for data"""
+        strategy = [True, "warn_once", "warn_always"]
+        for s in strategy:
+            with self.subTest(strategy=s):
+                node = Node(target=lambda x: x, wait_on_no_upstream=s)
+                t = threading.Thread(
+                    target=node._before_target,
+                    name="test_no_upstream_no_type_hint_wait",
+                    daemon=True,
+                )
+                t.start()
+                t.join(timeout=0.5)
+                self.assertTrue(
+                    t.is_alive(), "Thread should be waiting for upstream data"
+                )
+
+    def test_no_upstream_no_type_hint_ignore(self):
+        """Test behavior when there are no upstream nodes and no type hint and ignore"""
+        node = Node(target=lambda x: x, wait_on_no_upstream="ignore")
+        datas, ts = node._before_target()
+        self.assertEqual(datas, tuple())
+        self.assertIsInstance(ts, float)
+
+    def test_no_upstream_no_type_hint_error(self):
+        """Test behavior when there are no upstream nodes and no type hint and error"""
+        node = Node(target=lambda x: x, wait_on_no_upstream="error")
+        with self.assertRaises(ValueError):
+            node._before_target()
+
+    def test_no_upstream_with_type_hint_wait(self):
+        """Test behavior when there are no upstream nodes but with type hint and wait for data"""
+        strategy = [True, "warn_once", "warn_always"]
+        for s in strategy:
+            with self.subTest(strategy=s):
+                node = Node[int, int](target=lambda x: x, wait_on_no_upstream=s)
+                t = threading.Thread(
+                    target=node._before_target,
+                    name=f"test_no_upstream_with_type_hint_wait (strategy={s})",
+                    daemon=True,
+                )
+                t.start()
+                t.join(timeout=0.5)
+                self.assertTrue(
+                    t.is_alive(), "Thread should be waiting for upstream data"
+                )
+
+    def test_no_upstream_with_type_hint_ignore(self):
+        """Test behavior when there are no upstream nodes but with type hint and ignore"""
+        node = Node[int, int](target=lambda x: x, wait_on_no_upstream="ignore")
+        datas, ts = node._before_target()
+        self.assertEqual(datas, tuple())
+        self.assertIsInstance(ts, float)
+
+    def test_no_upstream_with_type_hint_error(self):
+        """Test behavior when there are no upstream nodes but with type hint and error"""
+        node = Node[int, int](target=lambda x: x, wait_on_no_upstream="error")
+        with self.assertRaises(ValueError):
+            node._before_target()
+
+    def test_with_upstream_with_type_hint_wait(self):
+        """Test behavior when there are insufficient upstream nodes and wait"""
+        strategy = [True, "warn_once", "warn_always"]
+        for s in strategy:
+            with self.subTest(strategy=s):
+                upstream = Node(target=lambda _: "data")
+                downstream = Node[int, int, int](
+                    target=lambda x, y: x, wait_on_no_upstream=s
+                )
+                downstream.subscribe_to(upstream)
+                upstream._after_target("data", 0)
+                t = threading.Thread(
+                    target=downstream._before_target,
+                    name=f"test_with_upstream_with_type_hint_wait (strategy={s})",
+                    daemon=True,
+                )
+                t.start()
+                t.join(timeout=0.5)
+                self.assertTrue(
+                    t.is_alive(), "Thread should be waiting for upstream data"
+                )
+
+    def test_with_upstream_with_type_hint_ignore(self):
+        """Test behavior when there are insufficient upstream nodes and ignore"""
+        upstream = Node(target=lambda _: "data")
+        downstream = Node[int, int, int](
+            target=lambda x, y: x, wait_on_no_upstream="ignore"
+        )
+        downstream.subscribe_to(upstream)
+        upstream._after_target("data", 0)
+        datas, ts = downstream._before_target()
+        self.assertEqual(datas, ("data",))
+        self.assertEqual(ts, 0)
+
+    def test_with_upstream_with_type_hint_error(self):
+        """Test behavior when there are insufficient upstream nodes and error"""
+        upstream = Node(target=lambda _: "data")
+        downstream = Node[int, int, int](
+            target=lambda x, y: x, wait_on_no_upstream="error"
+        )
+        downstream.subscribe_to(upstream)
+        upstream._after_target("data", 0)
+        with self.assertRaises(ValueError):
+            downstream._before_target()
+
+
 if __name__ == "__main__":
     unittest.main()

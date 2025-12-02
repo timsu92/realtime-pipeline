@@ -459,5 +459,130 @@ class TestNodeIncorrectConnection(unittest.TestCase):
             downstream._before_target()
 
 
+class TestSubscribeToWithTypeChecking(unittest.TestCase):
+    """Test subscribe_to method with type checking validation"""
+
+    # Define various node types for testing
+    class SourceInt(Node[None, int]):
+        """Outputs int type"""
+
+        pass
+
+    class SourceFloat(Node[None, float]):
+        """Outputs float type"""
+
+        pass
+
+    class SourceStr(Node[None, str]):
+        """Outputs str type"""
+
+        pass
+
+    class ProcessorIntFloat(Node[int, float, str]):
+        """Expects int and float as upstream, outputs str"""
+
+        pass
+
+    class ProcessorIntInt(Node[int, int, str]):
+        """Expects two ints as upstream, outputs str"""
+
+        pass
+
+    class ProcessorInt(Node[int, str]):
+        """Expects only int as upstream, outputs str"""
+
+        pass
+
+    class ProcessorGeneric(Node):
+        """Generic node without type specification"""
+
+        pass
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.source_int = TestSubscribeToWithTypeChecking.SourceInt()
+        self.source_float = TestSubscribeToWithTypeChecking.SourceFloat()
+        self.source_str = TestSubscribeToWithTypeChecking.SourceStr()
+        self.processor_int_float = TestSubscribeToWithTypeChecking.ProcessorIntFloat()
+        self.processor_int_int = TestSubscribeToWithTypeChecking.ProcessorIntInt()
+        self.processor_int = TestSubscribeToWithTypeChecking.ProcessorInt()
+        self.processor_generic = TestSubscribeToWithTypeChecking.ProcessorGeneric()
+
+    def test_subscribe_matching_type_with_check_enabled(self):
+        """Test subscribe_to succeeds when upstream output type matches expected input"""
+        # ProcessorInt expects int from upstream
+        # SourceInt outputs int
+        # Should succeed
+        self.processor_int.subscribe_to(self.source_int)
+        self.assertIn(self.source_int, self.processor_int._upstreams)
+
+    def test_subscribe_mismatched_type_with_check_enabled(self):
+        """Test subscribe_to fails when upstream output type doesn't match expected input"""
+        # ProcessorInt expects int from upstream
+        # SourceFloat outputs float
+        # Should raise ValueError due to type mismatch
+        with self.assertRaises(ValueError):
+            self.processor_int.subscribe_to(self.source_float)
+
+    def test_subscribe_multiple_matching_types_with_check_enabled(self):
+        """Test subscribe_to succeeds when multiple upstreams have matching types"""
+        # ProcessorIntFloat expects (int, float) from upstreams
+        # First subscribe to SourceInt (outputs int)
+        self.processor_int_float.subscribe_to(self.source_int)
+        self.assertIn(self.source_int, self.processor_int_float._upstreams)
+
+        # Then subscribe to SourceFloat (outputs float)
+        self.processor_int_float.subscribe_to(self.source_float)
+        self.assertIn(self.source_float, self.processor_int_float._upstreams)
+
+    def test_subscribe_wrong_type_in_multiple_upstreams_with_check_enabled(self):
+        """Test subscribe_to fails when one of multiple upstreams has wrong type"""
+        # ProcessorIntFloat expects (int, float) from upstreams
+        # First subscribe to SourceInt (correct)
+        self.processor_int_float.subscribe_to(self.source_int)
+
+        # Then try to subscribe to SourceStr (wrong type, should fail)
+        with self.assertRaises(ValueError):
+            self.processor_int_float.subscribe_to(self.source_str)
+
+    def test_subscribe_generic_upstream_node_always_allowed(self):
+        """Test subscribe_to always allows generic upstream nodes (no type info available)"""
+        # ProcessorInt expects specific types, but generic nodes should always be allowed
+        # since we can't validate them
+        self.processor_int.subscribe_to(self.processor_generic)
+        self.assertIn(self.processor_generic, self.processor_int._upstreams)
+
+    def test_subscribe_to_generic_processor_always_allowed(self):
+        """Test subscribe_to on generic processor always allows any upstream"""
+        # ProcessorGeneric has no type expectations
+        # Should accept any upstream regardless of type
+        self.processor_generic.subscribe_to(self.source_int)
+        self.processor_generic.subscribe_to(self.source_float)
+        self.processor_generic.subscribe_to(self.source_str)
+
+        self.assertIn(self.source_int, self.processor_generic._upstreams)
+        self.assertIn(self.source_float, self.processor_generic._upstreams)
+        self.assertIn(self.source_str, self.processor_generic._upstreams)
+
+    def test_subscribe_with_check_disabled_allows_mismatch(self):
+        """Test subscribe_to with type checking disabled allows type mismatches"""
+        # Create processor with type checking disabled
+        processor_no_check = TestSubscribeToWithTypeChecking.ProcessorInt(
+            wait_on_no_upstream="error", check_upstream_types=False
+        )
+        # Should succeed even though types don't match
+        processor_no_check.subscribe_to(self.source_float)
+        self.assertIn(self.source_float, processor_no_check._upstreams)
+
+    def test_subscribe_multiple_upstreams_same_type(self):
+        """Test subscribe_to allows multiple upstreams of the same type"""
+        another_source_int = TestSubscribeToWithTypeChecking.SourceInt()
+        self.processor_int_int.subscribe_to(self.source_int)
+        self.processor_int_int.subscribe_to(another_source_int)
+
+        self.assertIn(self.source_int, self.processor_int_int._upstreams)
+        self.assertIn(another_source_int, self.processor_int_int._upstreams)
+
+
 if __name__ == "__main__":
     unittest.main()

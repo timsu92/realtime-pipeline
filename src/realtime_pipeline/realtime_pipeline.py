@@ -1,12 +1,16 @@
+import logging
 import threading
+import time
 import weakref
 from bisect import bisect_left
+from functools import cached_property
 from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
     Generic,
     Iterable,
+    Literal,
     Mapping,
     Optional,
     TypeVar,
@@ -19,6 +23,11 @@ from typing_extensions import TypeAlias, TypeVarTuple, Unpack
 
 if TYPE_CHECKING:
     from realtime_pipeline.manager.progress import ProgressManager
+
+from realtime_pipeline.utils.typings import (
+    node_downstream_from_instance,
+    node_upstream_from_instance,
+)
 
 Timestamp: TypeAlias = float
 
@@ -37,7 +46,31 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         name: Optional[str] = None,
         daemon: Optional[bool] = None,
         progress_manager: Optional["ProgressManager"] = None,
+        wait_on_no_upstream: Literal[
+            True, "warn_once", "warn_always", "ignore", "error"
+        ] = None,  # for deprecation on future
     ) -> None:
+        """A processing node in the realtime data pipeline.
+
+        Args:
+            acceptable_time_bias (float): The maximum acceptable time difference for aligning data from upstream nodes.
+            target (Callable): The processing function for this node. Can be supplied by overriding the `run` method instead as well. Please check the implementation of `run` method for more details.
+            args (Iterable): Positional arguments for the target function.
+            kwargs (Mapping): Keyword arguments for the target function.
+            name (str): Name of the thread and logging functions.
+            daemon (bool): Whether this thread is a daemon thread.
+            progress_manager (ProgressManager): Optional progress manager to report progress to.
+            wait_on_no_upstream (bool | str | None): Policy when upstream nodes are missing or when upstream data is not available.
+                Acceptable values and behaviors:
+                - True: Block and wait indefinitely for upstream data.
+                - "warn_once": Log a warning once, then wait for upstream data.
+                - "warn_always": Log a warning each time and wait for upstream data.
+                - "ignore": Do not wait; proceed immediately (node will receive empty input and use the current time).
+                - "error": Raise a ValueError immediately if required upstream nodes or data are missing.
+                Notes:
+                - Passing None currently triggers a deprecation warning; callers should set this explicitly.
+                - Use the most appropriate policy for your pipeline semantics (e.g. "ignore" for best-effort or "error" for strict guarantees).
+        """
         super().__init__(name=name, args=args, kwargs=kwargs, daemon=daemon)
         # data access
         self._data_lock = rwlock.RWLockFair()
@@ -48,7 +81,20 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         self._last_downstream_gots: dict[Node, Timestamp] = {}
         self._subscribe_lock = threading.Lock()
         self._upstreams: list[Node] = []
+        self._has_upstreams_event = threading.Event()
         self.acceptable_time_bias = acceptable_time_bias
+        # TODO: deprecate this in future releases
+        if wait_on_no_upstream is None:
+            logging.warning(
+                DeprecationWarning(
+                    "`wait_on_no_upstream` should be set explicitly."
+                    "Currently defaulting to `error`, but will be `True` in future releases."
+                )
+            )
+            self.wait_on_no_upstream = "error"
+        else:
+            self.wait_on_no_upstream = wait_on_no_upstream
+        self.__warn_no_upstream_shown = False
 
         # job
         self.target = target
@@ -57,6 +103,14 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         self._progress_manager_ref = (
             weakref.ref(progress_manager) if progress_manager else None
         )
+
+    @cached_property
+    def _expected_upstream(self):
+        return node_upstream_from_instance(self)
+
+    @cached_property
+    def _expected_downstream(self):
+        return node_downstream_from_instance(self)
 
     @property
     def progress_manager(self) -> Optional["ProgressManager"]:
@@ -80,6 +134,7 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
                 raise ValueError(f"Node {self} already subscribed to {upstream_node}")
             upstream_node._last_downstream_gots[self] = -1
             self._upstreams.append(upstream_node)
+            self._has_upstreams_event.set()
 
     @deprecated(deprecated_in="0.3.0", details="Use `unsubscribe_from` instead.")
     def unsubscribe(self, subscriber: "Node"):
@@ -91,6 +146,7 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         with self._subscribe_lock, upstream_node._subscribe_lock:
             if upstream_node not in self._upstreams:
                 raise ValueError(f"Node {self} not subscribed to {upstream_node}")
+            self._has_upstreams_event.clear()
             upstream_node._last_downstream_gots.pop(self)
             self._upstreams.remove(upstream_node)
 
@@ -118,9 +174,53 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         return data
 
     def _get_from_upstream(self) -> tuple[tuple[Unpack[UpstreamT]], Timestamp]:
-        # The timestamps of processed data available from upstream nodes
         while True:
+            # The timestamps of processed data available from upstream nodes
             availables = [up._query_availables(self) for up in self._upstreams]
+
+            ### Check on received data from upstream nodes ###
+
+            if self._expected_upstream is None:
+                if len(availables) == 0:
+                    msg = f"Node {self} has no upstream nodes, but requested to get from upstream."
+                    if self.wait_on_no_upstream == "error":
+                        raise ValueError(msg)
+                    elif (
+                        self.wait_on_no_upstream == "warn_once"
+                        and not self.__warn_no_upstream_shown
+                    ) or self.wait_on_no_upstream == "warn_always":
+                        logging.warning(RuntimeWarning(msg))
+                        self.__warn_no_upstream_shown = True
+                    elif self.wait_on_no_upstream == "ignore":
+                        # No data available, return empty data with current timestamp
+                        return (tuple(), time.time())
+                    # Both warning and True will wait for upstream data
+                    self._has_upstreams_event.wait()
+                    continue
+                # len(availables) > 0, proceed normally
+            elif len(availables) < len(self._expected_upstream):
+                msg = f"Node {self} got only {len(availables)} upstream nodes, expected {len(self._expected_upstream)}"
+                if self.wait_on_no_upstream == "error":
+                    raise ValueError(msg)
+                elif self.wait_on_no_upstream in ["warn_once", "warn_always", True]:
+                    if (
+                        self.wait_on_no_upstream == "warn_once"
+                        and not self.__warn_no_upstream_shown
+                    ) or self.wait_on_no_upstream == "warn_always":
+                        logging.warning(RuntimeWarning(msg))
+                        self.__warn_no_upstream_shown = True
+                    if len(self._upstreams) == 0:
+                        self._has_upstreams_event.wait()
+                    else:
+                        self._wait_for_any_upstream_data()
+                    continue
+                elif self.wait_on_no_upstream == "ignore" and len(availables) == 0:
+                    # No data available, return empty data with current timestamp
+                    return (tuple(), time.time())
+            # if len(availables) == len(self._expected_upstream) or ignore with some data available, proceed normally
+
+            ### Process normally ###
+
             # Find the earliest timestamp among the latest timestamps from all upstream nodes
             min_of_latests = min(available_times[-1] for available_times in availables)
             # Find the closest timestamp to this time point in each upstream node

@@ -146,9 +146,10 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         with self._subscribe_lock, upstream_node._subscribe_lock:
             if upstream_node not in self._upstreams:
                 raise ValueError(f"Node {self} not subscribed to {upstream_node}")
-            self._has_upstreams_event.clear()
             upstream_node._last_downstream_gots.pop(self)
             self._upstreams.remove(upstream_node)
+            if not self._upstreams:
+                self._has_upstreams_event.clear()
 
     def _query_availables(self, downstream: "Node", block=True) -> list[Timestamp]:
         """Tries to query available data timestamps for the downstream node.

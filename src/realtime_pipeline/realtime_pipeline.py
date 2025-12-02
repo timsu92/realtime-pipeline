@@ -49,6 +49,7 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         wait_on_no_upstream: Literal[
             True, "warn_once", "warn_always", "ignore", "error"
         ] = None,  # for deprecation on future
+        check_upstream_types: bool = True,
     ) -> None:
         """A processing node in the realtime data pipeline.
 
@@ -70,6 +71,7 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
                 Notes:
                 - Passing None currently triggers a deprecation warning; callers should set this explicitly.
                 - Use the most appropriate policy for your pipeline semantics (e.g. "ignore" for best-effort or "error" for strict guarantees).
+            check_upstream_types (bool): Whether to validate that subscribed upstream nodes output types are compatible with expected upstream types. Defaults to True.
         """
         super().__init__(name=name, args=args, kwargs=kwargs, daemon=daemon)
         # data access
@@ -83,6 +85,7 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         self._upstreams: list[Node] = []
         self._has_upstreams_event = threading.Event()
         self.acceptable_time_bias = acceptable_time_bias
+        self.check_upstream_types = check_upstream_types
         # TODO: deprecate this in future releases
         if wait_on_no_upstream is None:
             logging.warning(
@@ -128,10 +131,33 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         return subscriber.subscribe_to(self)
 
     def subscribe_to(self, upstream_node: "Node"):
-        """Subscribes this node to a upstream_node"""
+        """Subscribes this node to a upstream_node
+
+        If check_upstream_types is enabled, validates that the upstream node's output type
+        is compatible with one of the expected upstream types for this node.
+
+        Raises:
+            ValueError: If upstream node is already subscribed or if type checking fails.
+        """
         with self._subscribe_lock, upstream_node._subscribe_lock:
             if upstream_node in self._upstreams:
                 raise ValueError(f"Node {self} already subscribed to {upstream_node}")
+
+            # Type checking if enabled
+            if self.check_upstream_types:
+                expected_upstream = self._expected_upstream
+                # Only perform type checking if this node has expected upstream types
+                if expected_upstream is not None:
+                    upstream_output_type = node_downstream_from_instance(upstream_node)
+                    # Only check if upstream node has defined output type
+                    if upstream_output_type is not None:
+                        # Check if upstream output type is in expected upstream types
+                        if upstream_output_type not in expected_upstream:
+                            raise ValueError(
+                                f"Node {upstream_node} outputs type {upstream_output_type}, "
+                                f"but {self} expects types {expected_upstream}"
+                            )
+
             upstream_node._last_downstream_gots[self] = -1
             self._upstreams.append(upstream_node)
             self._has_upstreams_event.set()

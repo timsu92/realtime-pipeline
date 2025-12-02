@@ -4,7 +4,9 @@ from typing import Any, get_args, get_origin
 from realtime_pipeline import Node
 
 
-def _find_param_tuple_from_class(cls: type, targetType: type) -> tuple[Any, ...] | None:
+def _find_param_tuple_from_class(
+    cls: type, target_type: type
+) -> tuple[Any, ...] | None:
     """
     Return the tuple of type arguments used to specialize targetType in cls's bases.
     e.g. for class Child(Parent[int, str]): return (int, str).
@@ -12,25 +14,25 @@ def _find_param_tuple_from_class(cls: type, targetType: type) -> tuple[Any, ...]
     """
     # Check if cls itself is a generic alias (e.g., Node[int, str])
     origin = get_origin(cls)
-    if origin is targetType:
+    if origin is target_type:
         return get_args(cls)
 
     # Look through MRO to find where targetType appears with concrete params
     for base in getattr(cls, "__orig_bases__", ()):
         origin = get_origin(base)
-        if origin is targetType:
+        if origin is target_type:
             return get_args(base)
 
     # Fallback: sometimes __orig_bases__ is not present; try annotations of bases
     # Only use getmro if cls is an actual class (not a generic alias)
     if isinstance(cls, type):
         for base in inspect.getmro(cls):
-            if base is targetType:
+            if base is target_type:
                 # Not specialized at this level
                 return None
             # If this mro entry is itself a typing alias of targetType[...]
             origin = get_origin(base)
-            if origin is targetType:
+            if origin is target_type:
                 return get_args(base)
 
     return None

@@ -1,12 +1,12 @@
 import inspect
-from typing import Any, get_args, get_origin
+from typing import Any, Optional, get_args, get_origin
 
 from realtime_pipeline import Node
 
 
 def _find_param_tuple_from_class(
     cls: type, target_type: type
-) -> tuple[Any, ...] | None:
+) -> Optional[tuple[Any, ...]]:
     """
     Return the tuple of type arguments used to specialize targetType in cls's bases.
     e.g. for class Child(Parent[int, str]): return (int, str).

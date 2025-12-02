@@ -1,8 +1,6 @@
 import inspect
 from typing import Any, Optional, get_args, get_origin
 
-from realtime_pipeline import Node
-
 
 def _find_param_tuple_from_class(
     cls: type, target_type: type
@@ -43,6 +41,8 @@ def node_upstream_from_class(cls: type):
     Determine the upstream type parameters (UpstreamT) used in the Node specialization for cls.
     Returns UpstreamT if known, else None.
     """
+    from realtime_pipeline import Node
+
     param_tuple = _find_param_tuple_from_class(cls, Node)
     if param_tuple is None:
         return None
@@ -55,6 +55,8 @@ def node_upstream_from_instance(obj: object):
     Try to read obj.__orig_class__ to get the concrete type args used for this instance.
     Returns UpstreamT if known, else None.
     """
+    from realtime_pipeline import Node
+
     orig = getattr(obj, "__orig_class__", None)
     if orig is None:
         # maybe try from the class
@@ -78,6 +80,8 @@ def node_downstream_from_class(cls: type):
     Determine the downstream type parameter (DownstreamT) used in the Node specialization for cls.
     Returns DownstreamT if known, else None.
     """
+    from realtime_pipeline import Node
+
     param_tuple = _find_param_tuple_from_class(cls, Node)
     if param_tuple is None:
         return None
@@ -90,6 +94,8 @@ def node_downstream_from_instance(obj: object):
     Try to read obj.__orig_class__ to get the concrete type args used for this instance.
     Returns DownstreamT if known, else None.
     """
+    from realtime_pipeline import Node
+
     orig = getattr(obj, "__orig_class__", None)
     if orig is None:
         # maybe try from the class

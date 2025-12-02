@@ -87,7 +87,7 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         if wait_on_no_upstream is None:
             logging.warning(
                 DeprecationWarning(
-                    "`wait_on_no_upstream` should be set explicitly."
+                    "`wait_on_no_upstream` should be set explicitly.\n"
                     "Currently defaulting to `error`, but will be `True` in future releases."
                 )
             )

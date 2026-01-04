@@ -48,8 +48,9 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         progress_manager: Optional["ProgressManager"] = None,
         wait_on_no_upstream: Literal[
             True, "warn_once", "warn_always", "ignore", "error"
-        ] = None,  # for deprecation on future
+        ] = None,  # for deprecation in the future
         check_upstream_types: bool = True,
+        check_downstream_type: bool = False,
     ) -> None:
         """A processing node in the realtime data pipeline.
 
@@ -72,6 +73,7 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
                 - Passing None currently triggers a deprecation warning; callers should set this explicitly.
                 - Use the most appropriate policy for your pipeline semantics (e.g. "ignore" for best-effort or "error" for strict guarantees).
             check_upstream_types (bool): Whether to validate that subscribed upstream nodes output types are compatible with expected upstream types. Defaults to True.
+            check_downstream_type (bool): Whether to validate that data passing to downstream matches in runtime. Defaults to False.
         """
         super().__init__(name=name, args=args, kwargs=kwargs, daemon=daemon)
         # data access
@@ -86,6 +88,7 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         self._has_upstreams_event = threading.Event()
         self.acceptable_time_bias = acceptable_time_bias
         self.check_upstream_types = check_upstream_types
+        self.check_downstream_type = check_downstream_type
         # TODO: deprecate this in future releases
         if wait_on_no_upstream is None:
             logging.warning(
@@ -289,6 +292,14 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         return self._get_from_upstream()
 
     def _after_target(self, result: DownstreamT, timestamp: Timestamp):
+        if self.check_downstream_type:
+            expected_downstream = self._expected_downstream
+            if expected_downstream is not None:
+                if not isinstance(result, expected_downstream):
+                    raise ValueError(
+                        f"Node {self} produced data of type {type(result)}, "
+                        f"but expected type {expected_downstream}"
+                    )
         self._data[timestamp] = result
         self._new_data_available.set()
         self._cleanup_old_data()

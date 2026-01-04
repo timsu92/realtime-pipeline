@@ -1,3 +1,4 @@
+import itertools
 import threading
 import time
 import unittest
@@ -582,6 +583,59 @@ class TestSubscribeToWithTypeChecking(unittest.TestCase):
 
         self.assertIn(self.source_int, self.processor_int_int._upstreams)
         self.assertIn(another_source_int, self.processor_int_int._upstreams)
+
+
+class TestDownstreamTypeDetection(unittest.TestCase):
+    """Test detection of downstream type parameters in Node specializations"""
+
+    class InheritedTyped(Node[int, str]):
+        pass
+
+    class InheritedGeneric(Node):
+        pass
+
+    DirectTyped = Node[int, str]
+    DirectGeneric = Node
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.typed_nodes_check: list[Node] = [
+            TestDownstreamTypeDetection.DirectTyped(check_downstream_type=True),
+            TestDownstreamTypeDetection.InheritedTyped(check_downstream_type=True),
+        ]
+        self.typed_nodes_no_check: list[Node] = [
+            TestDownstreamTypeDetection.DirectTyped(check_downstream_type=False),
+            TestDownstreamTypeDetection.InheritedTyped(check_downstream_type=False),
+        ]
+        self.generic_nodes: list[Node] = [
+            TestDownstreamTypeDetection.DirectGeneric(check_downstream_type=True),
+            TestDownstreamTypeDetection.DirectGeneric(check_downstream_type=False),
+            TestDownstreamTypeDetection.InheritedGeneric(check_downstream_type=True),
+            TestDownstreamTypeDetection.InheritedGeneric(check_downstream_type=False),
+        ]
+
+    def test_downstream_type_detection(self):
+        for node, match_type in itertools.product(
+            self.typed_nodes_check, [True, False]
+        ):
+            with self.subTest(node=type(node), match_type=match_type):
+                if match_type:
+                    # Should put data in without error
+                    node._after_target("test_string", 0.0)
+                else:
+                    # Should raise ValueError due to type mismatch
+                    with self.assertRaises(ValueError):
+                        node._after_target(12345, 0.0)
+        for node, match_type in itertools.product(
+            self.typed_nodes_no_check, [True, False]
+        ):
+            with self.subTest(node=type(node), match_type=match_type):
+                # Type checking is disabled, so both should pass
+                node._after_target("test_string" if match_type else 12345, 0.0)
+        for node in self.generic_nodes:
+            with self.subTest(node=type(node)):
+                # Generic nodes should accept any data type
+                node._after_target("test_string", 0.0)
 
 
 if __name__ == "__main__":

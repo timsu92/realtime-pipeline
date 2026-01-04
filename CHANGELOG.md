@@ -1,3 +1,22 @@
+## v0.5.0 (2026-01-05)
+
+### Feat
+
+- **node**: ability to check on downstream data
+- **node**: verify type of newly coming upstream nodes
+- **node**: different behavior when insufficient upstream data is given
+- **typing**: retrieve typed upstreams and downstream from type annotations
+
+### Fix
+
+- **node**: Only clear the event after all upstreams have been removed
+- **typings**: circular import
+- **typing**: Python 3.9 doesn't support "|" in type annotations
+
+### Refactor
+
+- **typing**: conform to python naming convention
+
 ## v0.4.0 (2025-09-19)
 
 ### Feat

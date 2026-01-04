@@ -3,12 +3,12 @@ default_stages:
   - post-merge
 repos:
   - repo: https://github.com/netromdk/vermin
-    rev: v1.6.0
+    rev: v1.8.0
     hooks:
       - id: vermin
         args: ["src"] # other configs are in vermin.conf
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.12
+    rev: v0.14.10
     hooks:
       # linter
       - id: ruff-check
@@ -16,7 +16,7 @@ repos:
       - id: ruff-format
         args: ["--verbose"]
   - repo: https://github.com/commitizen-tools/commitizen
-    rev: v4.8.4
+    rev: v4.11.0
     hooks:
       - id: commitizen
       - id: commitizen-branch

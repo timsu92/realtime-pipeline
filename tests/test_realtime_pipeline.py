@@ -3,6 +3,7 @@ import threading
 import time
 import unittest
 from random import randint
+from typing import Optional
 
 from realtime_pipeline import Node
 
@@ -499,15 +500,29 @@ class TestSubscribeToWithTypeChecking(unittest.TestCase):
 
         pass
 
+    class ProcessorOptionalInt(Node[Optional[int], str]):
+        """Expects Optional[int] as upstream, outputs str"""
+
+        pass
+
+    class SourceOptionalInt(Node[None, Optional[int]]):
+        """Outputs Optional[int] type"""
+
+        pass
+
     def setUp(self) -> None:
         super().setUp()
         self.source_int = TestSubscribeToWithTypeChecking.SourceInt()
         self.source_float = TestSubscribeToWithTypeChecking.SourceFloat()
         self.source_str = TestSubscribeToWithTypeChecking.SourceStr()
+        self.source_optional_int = TestSubscribeToWithTypeChecking.SourceOptionalInt()
         self.processor_int_float = TestSubscribeToWithTypeChecking.ProcessorIntFloat()
         self.processor_int_int = TestSubscribeToWithTypeChecking.ProcessorIntInt()
         self.processor_int = TestSubscribeToWithTypeChecking.ProcessorInt()
         self.processor_generic = TestSubscribeToWithTypeChecking.ProcessorGeneric()
+        self.processor_optional_int = (
+            TestSubscribeToWithTypeChecking.ProcessorOptionalInt()
+        )
 
     def test_subscribe_matching_type_with_check_enabled(self):
         """Test subscribe_to succeeds when upstream output type matches expected input"""
@@ -584,6 +599,18 @@ class TestSubscribeToWithTypeChecking(unittest.TestCase):
         self.assertIn(self.source_int, self.processor_int_int._upstreams)
         self.assertIn(another_source_int, self.processor_int_int._upstreams)
 
+    def test_subscribe_optional_type_compatibility(self):
+        """Test that type checking properly handles Optional types"""
+        # Test 1: int upstream -> Optional[int] downstream
+        # SHOULD PASS: int is compatible with Optional[int] (int is a subset of Union[int, None])
+        self.processor_optional_int.subscribe_to(self.source_int)
+        self.assertIn(self.source_int, self.processor_optional_int._upstreams)
+
+        # Test 2: Optional[int] upstream -> int downstream
+        # SHOULD FAIL: Optional[int] (Union[int, None]) should not match when only int is expected
+        with self.assertRaises(ValueError):
+            self.processor_int.subscribe_to(self.source_optional_int)
+
 
 class TestDownstreamTypeDetection(unittest.TestCase):
     """Test detection of downstream type parameters in Node specializations"""
@@ -636,6 +663,27 @@ class TestDownstreamTypeDetection(unittest.TestCase):
             with self.subTest(node=type(node)):
                 # Generic nodes should accept any data type
                 node._after_target("test_string", 0.0)
+
+    def test_optional_downstream_type_accepts_concrete_and_none(self):
+        """Test that Optional[str] accepts both str and None values"""
+
+        # Create a node that outputs Optional[str]
+        class NodeWithOptionalDownstream(Node[int, Optional[str]]):
+            pass
+
+        node = NodeWithOptionalDownstream(check_downstream_type=True)
+
+        # Should accept str value (str is part of Optional[str])
+        node._after_target("test_string", 0.0)
+        self.assertIn(0.0, node._data)
+
+        # Should accept None value (None is part of Optional[str])
+        node._after_target(None, 1.0)
+        self.assertIn(1.0, node._data)
+
+        # Should reject int value (int is not part of Optional[str])
+        with self.assertRaises(ValueError):
+            node._after_target(123, 2.0)
 
 
 if __name__ == "__main__":

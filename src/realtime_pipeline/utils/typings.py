@@ -32,8 +32,8 @@ def is_type_compatible(actual_type: type, expected_type: type) -> bool:
         if type(None) in expected_args:
             # This is Optional or a Union containing None
             non_none_types = [t for t in expected_args if t is not type(None)]
-            # actual_type is compatible if it matches one of the non-None types
-            if actual_type in non_none_types:
+            # actual_type is compatible if it is compatible with one of the non-None types
+            if any(is_type_compatible(actual_type, t) for t in non_none_types):
                 return True
 
     # Check if actual_type is Optional (Union with None)
@@ -46,51 +46,6 @@ def is_type_compatible(actual_type: type, expected_type: type) -> bool:
             return False
 
     return False
-
-
-def is_instance_of_type(value: Any, expected_type: type) -> bool:
-    """Check if a value is an instance of the expected type.
-
-    This function handles special typing constructs like Optional/Union
-    that cannot be used directly with isinstance().
-
-    Args:
-        value: The value to check
-        expected_type: The type to check against
-
-    Returns:
-        True if value is an instance of expected_type, False otherwise.
-    """
-    # Handle None specially
-    if value is None:
-        # None is only valid for Optional types
-        origin = get_origin(expected_type)
-        if origin is Union:
-            args = get_args(expected_type)
-            return type(None) in args
-        return expected_type is type(None)
-
-    # Handle Union/Optional types
-    origin = get_origin(expected_type)
-    if origin is Union:
-        args = get_args(expected_type)
-        # Check if value matches any of the union members
-        for arg in args:
-            if arg is type(None):
-                # Already handled None case above
-                continue
-            # Recursively check each union member
-            if is_instance_of_type(value, arg):
-                return True
-        return False
-
-    # For regular types, use isinstance
-    try:
-        return isinstance(value, expected_type)
-    except TypeError:
-        # Some typing constructs can't be used with isinstance
-        # In this case, we can't validate, so return True to avoid false negatives
-        return True
 
 
 def _find_param_tuple_from_class(

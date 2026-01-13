@@ -24,8 +24,9 @@ from typing_extensions import TypeAlias, TypeVarTuple, Unpack
 if TYPE_CHECKING:
     from realtime_pipeline.manager.progress import ProgressManager
 
+from typeguard import TypeCheckError, check_type
+
 from realtime_pipeline.utils.typings import (
-    is_instance_of_type,
     is_type_compatible,
     node_downstream_from_instance,
     node_upstream_from_instance,
@@ -300,11 +301,14 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         if self.check_downstream_type:
             expected_downstream = self._expected_downstream
             if expected_downstream is not None:
-                if not is_instance_of_type(result, expected_downstream):
+                try:
+                    check_type(result, expected_downstream)
+                except TypeCheckError as e:
                     raise ValueError(
                         f"Node {self} produced data of type {type(result)}, "
-                        f"but expected type {expected_downstream}"
-                    )
+                        f"but expected type {expected_downstream}. "
+                        f"Type check failed: {e}"
+                    ) from e
         self._data[timestamp] = result
         self._new_data_available.set()
         self._cleanup_old_data()

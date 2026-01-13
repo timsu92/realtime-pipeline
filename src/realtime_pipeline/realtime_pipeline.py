@@ -25,6 +25,8 @@ if TYPE_CHECKING:
     from realtime_pipeline.manager.progress import ProgressManager
 
 from realtime_pipeline.utils.typings import (
+    is_instance_of_type,
+    is_type_compatible,
     node_downstream_from_instance,
     node_upstream_from_instance,
 )
@@ -154,8 +156,11 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
                     upstream_output_type = node_downstream_from_instance(upstream_node)
                     # Only check if upstream node has defined output type
                     if upstream_output_type is not None:
-                        # Check if upstream output type is in expected upstream types
-                        if upstream_output_type not in expected_upstream:
+                        # Check if upstream output type is compatible with any expected upstream type
+                        if not any(
+                            is_type_compatible(upstream_output_type, expected_type)
+                            for expected_type in expected_upstream
+                        ):
                             raise ValueError(
                                 f"Node {upstream_node} outputs type {upstream_output_type}, "
                                 f"but {self} expects types {expected_upstream}"
@@ -295,7 +300,7 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
         if self.check_downstream_type:
             expected_downstream = self._expected_downstream
             if expected_downstream is not None:
-                if not isinstance(result, expected_downstream):
+                if not is_instance_of_type(result, expected_downstream):
                     raise ValueError(
                         f"Node {self} produced data of type {type(result)}, "
                         f"but expected type {expected_downstream}"

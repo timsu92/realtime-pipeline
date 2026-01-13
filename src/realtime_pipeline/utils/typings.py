@@ -1,5 +1,96 @@
 import inspect
-from typing import Any, Optional, get_args, get_origin
+from typing import Any, Optional, Union, get_args, get_origin
+
+
+def is_type_compatible(actual_type: type, expected_type: type) -> bool:
+    """Check if actual_type is compatible with expected_type.
+
+    Args:
+        actual_type: The type that is actually provided (e.g., from upstream node)
+        expected_type: The type that is expected (e.g., by downstream node)
+
+    Returns:
+        True if actual_type is compatible with expected_type, False otherwise.
+
+    Compatibility rules:
+    - Direct equality: int == int
+    - Concrete type to Optional: int is compatible with Optional[int]
+      (because int can be used where Optional[int] is expected)
+    - Optional to concrete: Optional[int] is NOT compatible with int
+      (because Optional[int] might be None)
+    """
+    # Direct equality
+    if actual_type == expected_type:
+        return True
+
+    # Check if expected_type is Optional (Union with None)
+    expected_origin = get_origin(expected_type)
+    if expected_origin is Union:
+        expected_args = get_args(expected_type)
+        # Optional[X] is Union[X, None] or Union[X, type(None)]
+        # Check if actual_type is one of the non-None types in the Union
+        if type(None) in expected_args:
+            # This is Optional or a Union containing None
+            non_none_types = [t for t in expected_args if t is not type(None)]
+            # actual_type is compatible if it matches one of the non-None types
+            if actual_type in non_none_types:
+                return True
+
+    # Check if actual_type is Optional (Union with None)
+    actual_origin = get_origin(actual_type)
+    if actual_origin is Union:
+        actual_args = get_args(actual_type)
+        # If actual is Optional but expected is concrete, not compatible
+        # (Optional[int] cannot be used where int is expected, might be None)
+        if type(None) in actual_args and expected_origin is not Union:
+            return False
+
+    return False
+
+
+def is_instance_of_type(value: Any, expected_type: type) -> bool:
+    """Check if a value is an instance of the expected type.
+
+    This function handles special typing constructs like Optional/Union
+    that cannot be used directly with isinstance().
+
+    Args:
+        value: The value to check
+        expected_type: The type to check against
+
+    Returns:
+        True if value is an instance of expected_type, False otherwise.
+    """
+    # Handle None specially
+    if value is None:
+        # None is only valid for Optional types
+        origin = get_origin(expected_type)
+        if origin is Union:
+            args = get_args(expected_type)
+            return type(None) in args
+        return expected_type is type(None)
+
+    # Handle Union/Optional types
+    origin = get_origin(expected_type)
+    if origin is Union:
+        args = get_args(expected_type)
+        # Check if value matches any of the union members
+        for arg in args:
+            if arg is type(None):
+                # Already handled None case above
+                continue
+            # Recursively check each union member
+            if is_instance_of_type(value, arg):
+                return True
+        return False
+
+    # For regular types, use isinstance
+    try:
+        return isinstance(value, expected_type)
+    except TypeError:
+        # Some typing constructs can't be used with isinstance
+        # In this case, we can't validate, so return True to avoid false negatives
+        return True
 
 
 def _find_param_tuple_from_class(

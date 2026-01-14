@@ -18,6 +18,8 @@ def is_type_compatible(actual_type: type, expected_type: type) -> bool:
       (because int can be used where Optional[int] is expected)
     - Optional to concrete: Optional[int] is NOT compatible with int
       (because Optional[int] might be None)
+    - Generic types: NDArray[np.uint8] is compatible with NDArray
+      (specialized type is compatible with generic type if origins match)
     """
     # Direct equality
     if actual_type == expected_type:
@@ -44,6 +46,23 @@ def is_type_compatible(actual_type: type, expected_type: type) -> bool:
         # (Optional[int] cannot be used where int is expected, might be None)
         if type(None) in actual_args and expected_origin is not Union:
             return False
+
+    # Generic type compatibility: if both have the same origin, consider them compatible
+    # e.g., NDArray[np.uint8] (origin: ndarray) is compatible with NDArray (origin: ndarray)
+    # This allows specialized generic types to be used where generic types are expected
+
+    # Currently, there's no nice way to deep check generic parameters for full compatibility
+    # NDArray[np.uint8] vs NDArray[str] would still be considered compatible here
+    if actual_origin is not None and expected_origin is not None:
+        if actual_origin == expected_origin:
+            return True
+
+    # If actual_type has a generic origin but expected_type doesn't,
+    # check if the origin matches the expected_type
+    # e.g., NDArray[np.uint8] (origin: ndarray) is compatible with ndarray
+    if actual_origin is not None and expected_origin is None:
+        if actual_origin == expected_type:
+            return True
 
     return False
 

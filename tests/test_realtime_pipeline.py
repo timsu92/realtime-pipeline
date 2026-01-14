@@ -439,14 +439,14 @@ class TestNodeIncorrectConnection(unittest.TestCase):
 
     def test_with_upstream_with_type_hint_ignore(self):
         """Test behavior when there are insufficient upstream nodes and ignore"""
-        upstream = Node(target=lambda _: "data")
+        upstream = Node(target=lambda _: 123)
         downstream = Node[int, int, int](
             target=lambda x, y: x, wait_on_no_upstream="ignore"
         )
         downstream.subscribe_to(upstream)
-        upstream._after_target("data", 0)
+        upstream._after_target(123, 0)
         datas, ts = downstream._before_target()
-        self.assertEqual(datas, ("data",))
+        self.assertEqual(datas, (123,))
         self.assertEqual(ts, 0)
 
     def test_with_upstream_with_type_hint_error(self):

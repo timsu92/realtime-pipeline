@@ -1,3 +1,10 @@
+## v0.5.1 (2026-01-14)
+
+### Fix
+
+- **node**: use typeguard to check on types to avoid blind points
+- **node**: treat specially to optional/union
+
 ## v0.5.0 (2026-01-05)
 
 ### Feat

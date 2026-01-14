@@ -1,6 +1,6 @@
 [project]
 name = "realtime-pipeline"
-version = "0.5.0"
+version = "0.5.1"
 description = "Build up pipelined programs to process the newest data"
 authors = [
     { name = "timsu92", email = "33785401+timsu92@users.noreply.github.com" },

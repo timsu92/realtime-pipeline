@@ -1,3 +1,9 @@
+## v0.5.3 (2026-01-14)
+
+### Fix
+
+- **typing**: allow generic types when checking data passing through nodes
+
 ## v0.5.2 (2026-01-14)
 
 ### Perf

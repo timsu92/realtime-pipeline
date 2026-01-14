@@ -357,7 +357,6 @@ sortedcontainers==2.4.0 \
 sortedcontainers-stubs==2.4.3 \
     --hash=sha256:4496109dfa6645e4b675f57fbc7e42ec4d1bed2c74aab7fa379e0795e49fe406 \
     --hash=sha256:ba172daceda4bd617d2f6ffd24582261a494da92705409651967faa40ebc75dd
-    # via realtime-pipeline
 termcolor==3.1.0 \
     --hash=sha256:591dd26b5c2ce03b9e43f391264626557873ce1d379019786f99b0c2bee140aa \
     --hash=sha256:6a6dd7fbee581909eeec6a756cff1d7f7c376063b14e4a298dc4980309e55970

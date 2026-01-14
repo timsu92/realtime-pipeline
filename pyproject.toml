@@ -31,7 +31,6 @@ dependencies = [
     "deprecation>=2.1.0",
     "readerwriterlock>=1.0.9",
     "sortedcontainers>=2.4.0",
-    "sortedcontainers-stubs>=2.4.3",
     "typing-extensions>=4.14.1",
     "typeguard>=4.4.4",
 ]
@@ -59,6 +58,7 @@ dev = [
     "pre-commit>=3.2.0",
     "ruff>=0.12.5",
     "vermin>=1.6.0",
+    "sortedcontainers-stubs>=2.4.3",
     "realtime-pipeline[progress]",
 ]
 

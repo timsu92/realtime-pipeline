@@ -503,7 +503,6 @@ dependencies = [
     { name = "deprecation" },
     { name = "readerwriterlock" },
     { name = "sortedcontainers" },
-    { name = "sortedcontainers-stubs" },
     { name = "typeguard" },
     { name = "typing-extensions" },
 ]
@@ -519,6 +518,7 @@ dev = [
     { name = "pre-commit" },
     { name = "realtime-pipeline", extra = ["progress"] },
     { name = "ruff" },
+    { name = "sortedcontainers-stubs" },
     { name = "vermin" },
 ]
 
@@ -528,7 +528,6 @@ requires-dist = [
     { name = "readerwriterlock", specifier = ">=1.0.9" },
     { name = "rich", marker = "extra == 'progress'", specifier = ">=14.1.0" },
     { name = "sortedcontainers", specifier = ">=2.4.0" },
-    { name = "sortedcontainers-stubs", specifier = ">=2.4.3" },
     { name = "typeguard", specifier = ">=4.4.4" },
     { name = "typing-extensions", specifier = ">=4.14.1" },
 ]
@@ -540,6 +539,7 @@ dev = [
     { name = "pre-commit", specifier = ">=3.2.0" },
     { name = "realtime-pipeline", extras = ["progress"] },
     { name = "ruff", specifier = ">=0.12.5" },
+    { name = "sortedcontainers-stubs", specifier = ">=2.4.3" },
     { name = "vermin", specifier = ">=1.6.0" },
 ]
 

@@ -284,6 +284,23 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
             )
             return datas, min_of_latests
 
+    def _check_data_matches_expected_upstream(self, data: tuple[Unpack[UpstreamT]]):
+        """
+        Runtime check that the received data from all upstreams matches the expected upstream types.
+        """
+        if self._expected_upstream is not None:
+            for i, (datum, expected_type) in enumerate(
+                zip(data, self._expected_upstream)
+            ):
+                try:
+                    check_type(datum, expected_type)
+                except TypeCheckError as e:
+                    raise ValueError(
+                        f"Node {self} received data of type {type(datum)} from upstream {self._upstreams[i]},\n"
+                        f"but expected type {expected_type}.\n"
+                        f"Type check failed: {e}"
+                    ) from e
+
     def _cleanup_old_data(self):
         """Should be called by `run` function only. Not thread-safe"""
         if not self._last_downstream_gots:
@@ -295,7 +312,10 @@ class Node(Generic[Unpack[UpstreamT], DownstreamT], threading.Thread):
                 self._data.popitem(0)
 
     def _before_target(self):
-        return self._get_from_upstream()
+        datas, min_of_latests = self._get_from_upstream()
+        if self.check_upstream_types:
+            self._check_data_matches_expected_upstream(datas)
+        return datas, min_of_latests
 
     def _after_target(self, result: DownstreamT, timestamp: Timestamp):
         if self.check_downstream_type:

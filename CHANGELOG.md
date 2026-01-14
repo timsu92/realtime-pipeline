@@ -1,3 +1,9 @@
+## v0.5.2 (2026-01-14)
+
+### Perf
+
+- **pyproject**: move typing stubs out of production package
+
 ## v0.5.1 (2026-01-14)
 
 ### Fix

@@ -383,9 +383,9 @@ typing-extensions==4.15.0 \
     #   sortedcontainers-stubs
     #   typeguard
     #   virtualenv
-vermin==1.6.0 \
-    --hash=sha256:6266ca02f55d1c2aa189a610017c132eb2d1934f09e72a955b1eb3820ee6d4ef \
-    --hash=sha256:f1fa9ee40f59983dc40e0477eb2b1fa8061a3df4c3b2bcf349add462a5610efb
+vermin==1.8.0 \
+    --hash=sha256:3621955ac2a2950175c5b4a9b2fc3bd24bd416da0388893c9eb6971264e4ca1f \
+    --hash=sha256:6f2b98ad697a16ed3442e81a0f0baabfc38c185b78aaab1b1fecd87bdd6640b8
 virtualenv==20.36.1 \
     --hash=sha256:575a8d6b124ef88f6f51d56d656132389f961062a9177016a50e4f507bbcc19f \
     --hash=sha256:8befb5c81842c641f8ee658481e42641c68b5eab3521d8e092d18320902466ba

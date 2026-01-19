@@ -328,9 +328,9 @@ readerwriterlock==1.0.9 \
     --hash=sha256:8c4b704e60d15991462081a27ef46762fea49b478aa4426644f2146754759ca7 \
     --hash=sha256:b7c4cc003435d7a8ff15b312b0a62a88d9800ba6164af88991f87f8b748f9bea
     # via realtime-pipeline
-rich==14.1.0 \
-    --hash=sha256:536f5f1785986d6dbdea3c75205c473f970777b4a0d6c6dd1b696aa05a3fa04f \
-    --hash=sha256:e497a48b844b0320d45007cdebfeaeed8db2a4f4bcf49f15e455cfc4af11eaa8
+rich==14.2.0 \
+    --hash=sha256:73ff50c7c0c1c77c8243079283f4edb376f0f6442433aecb8ce7e6d0b92d1fe4 \
+    --hash=sha256:76bc51fe2e57d2b1be1f96c524b890b816e334ab4c1e45888799bfaab0021edd
     # via realtime-pipeline
 ruff==0.14.10 \
     --hash=sha256:104c49fc7ab73f3f3a758039adea978869a918f31b73280db175b43a2d9b51d6 \
